@@ -127,10 +127,6 @@ function drawCanvas(){
   cv.height=PAD*2+rows.length*BH+(rows.length-1)*G;
   const g=cv.getContext('2d');
   g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
-  // 淡淡的背景方格
-  g.strokeStyle='#e8e8e8';g.lineWidth=1;
-  for(let x=0;x<=cv.width;x+=S/2){g.beginPath();g.moveTo(x,0);g.lineTo(x,cv.height);g.stroke()}
-  for(let y=0;y<=cv.height;y+=S/2){g.beginPath();g.moveTo(0,y);g.lineTo(cv.width,y);g.stroke()}
   rows.forEach((row,r)=>row.forEach((box,b)=>{
     const ox=PAD+b*(BW+G),oy=PAD+r*(BH+G);
     g.fillStyle='#fff';g.fillRect(ox,oy,BW,BH);
