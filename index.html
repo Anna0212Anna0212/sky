@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的方塊簡譜</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--bg:#f4f4f2;--panel:#fff;--ink:#222;--line:#d9d9d9;--cell:22px}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0}
+button{font:inherit;padding:6px 12px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
+button:hover{background:#eee}
+main{flex:1;display:flex;min-height:0}
+aside{width:150px;padding:14px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+aside h2{font-size:14px;margin:0 0 4px;color:#666}
+.tool{display:flex;align-items:center;gap:8px;text-align:left}
+.tool.on{outline:2px solid #4a90e2;background:#eef5ff}
+.sw{width:18px;height:18px;border:1px solid #888;display:inline-block}
+.tool small{margin-left:auto;color:#888}
+aside label{font-size:13px;display:flex;justify-content:space-between;align-items:center}
+aside input[type=number]{width:52px}
+#wrap{flex:1;overflow:auto;padding:20px}
+#sheet{display:inline-block;background:#fff;padding:14px;border:1px solid var(--line)}
+.row{display:flex;gap:14px;margin-bottom:14px;align-items:center}
+.box{display:grid;grid-template-columns:repeat(5,var(--cell));grid-template-rows:repeat(3,var(--cell));border:2px solid #000;background:#fff;touch-action:none}
+.c{border:1px solid #e6e6e6;width:var(--cell);height:var(--cell)}
+.c[data-v="1"]{background:#000}.c[data-v="2"]{background:#f00}.c[data-v="3"]{background:#1ba7e6}
+.rm{opacity:.35;padding:2px 6px}.rm:hover{opacity:1}
+#bar{margin-top:6px;display:flex;gap:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>♫ 我的方塊簡譜</h1>
+  <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button></div>
+</header>
+<main>
+  <aside>
+    <h2>工具</h2>
+    <button class="tool" data-t="1"><span class="sw" style="background:#000"></span>黑色<small>1</small></button>
+    <button class="tool" data-t="2"><span class="sw" style="background:#f00"></span>紅色<small>2</small></button>
+    <button class="tool" data-t="3"><span class="sw" style="background:#1ba7e6"></span>藍色<small>3</small></button>
+    <button class="tool" data-t="0"><span class="sw" style="background:#fff"></span>橡皮擦<small>4</small></button>
+    <h2 style="margin-top:12px">版面</h2>
+    <label>每列譜數 <input type="number" id="cols" min="1" max="12" value="6"></label>
+    <button id="clear">清空全部</button>
+    <p style="font-size:12px;color:#888;margin:6px 0 0">點一下或拖曳塗色；對同色格再點一次可擦除。</p>
+  </aside>
+  <div id="wrap">
+    <div id="sheet"></div>
+    <div id="bar"><button id="addRow">＋ 向下新增一列</button></div>
+  </div>
+</main>
+<script>
+const W=5,H=3,KEY='fangkuai-score-v1';
+let tool=1,cols=6,rows=[],painting=false,paintVal=1;
+const newBox=()=>Array(W*H).fill(0);
+const newRow=()=>Array.from({length:cols},newBox);
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.rows){rows=s.rows;cols=s.cols}}catch(e){}
+if(!rows.length)rows=[newRow(),newRow(),newRow(),newRow()];
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({cols,rows}))}catch(e){}};
+
+function render(){
+  const sh=document.getElementById('sheet');sh.innerHTML='';
+  rows.forEach((row,r)=>{
+    const rd=document.createElement('div');rd.className='row';
+    row.forEach((box,b)=>{
+      const bd=document.createElement('div');bd.className='box';
+      box.forEach((v,i)=>{
+        const c=document.createElement('div');c.className='c';c.dataset.v=v;
+        c.dataset.r=r;c.dataset.b=b;c.dataset.i=i;bd.appendChild(c);
+      });
+      rd.appendChild(bd);
+    });
+    const x=document.createElement('button');x.className='rm';x.textContent='✕';x.title='刪除此列';
+    x.onclick=()=>{if(rows.length>1){rows.splice(r,1);save();render()}};
+    rd.appendChild(x);sh.appendChild(rd);
+  });
+  document.getElementById('cols').value=cols;
+}
+function apply(el,val){
+  if(!el||!el.classList||!el.classList.contains('c'))return;
+  const {r,b,i}=el.dataset;rows[r][b][i]=val;el.dataset.v=val;
+}
+const sheet=document.getElementById('sheet');
+sheet.addEventListener('pointerdown',e=>{
+  const el=e.target;if(!el.classList.contains('c'))return;
+  painting=true;
+  paintVal=(+el.dataset.v===tool)?0:tool;
+  apply(el,paintVal);e.preventDefault();
+});
+sheet.addEventListener('pointermove',e=>{
+  if(!painting)return;
+  apply(document.elementFromPoint(e.clientX,e.clientY),paintVal);
+});
+addEventListener('pointerup',()=>{if(painting){painting=false;save()}});
+
+function setTool(t){
+  tool=t;
+  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on',+b.dataset.t===t));
+}
+document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>setTool(+b.dataset.t));
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  const m={'1':1,'2':2,'3':3,'4':0,'0':0};
+  if(e.key in m)setTool(m[e.key]);
+});
+setTool(1);
+
+document.getElementById('addRow').onclick=()=>{rows.push(newRow());save();render()};
+document.getElementById('clear').onclick=()=>{if(confirm('確定清空全部樂譜？')){rows=rows.map(()=>newRow());save();render()}};
+document.getElementById('cols').onchange=e=>{
+  const n=Math.max(1,Math.min(12,+e.target.value||6));
+  rows=rows.map(r=>{const a=r.slice(0,n);while(a.length<n)a.push(newBox());return a});
+  cols=n;save();render();
+};
+
+// ---- 匯出（只輸出譜面）----
+const COLORS=['#fff','#000','#f00','#1ba7e6'];
+function drawCanvas(){
+  const S=36,G=20,PAD=24,BW=W*S,BH=H*S;
+  const cv=document.createElement('canvas');
+  cv.width=PAD*2+cols*BW+(cols-1)*G;
+  cv.height=PAD*2+rows.length*BH+(rows.length-1)*G;
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  // 淡淡的背景方格
+  g.strokeStyle='#e8e8e8';g.lineWidth=1;
+  for(let x=0;x<=cv.width;x+=S/2){g.beginPath();g.moveTo(x,0);g.lineTo(x,cv.height);g.stroke()}
+  for(let y=0;y<=cv.height;y+=S/2){g.beginPath();g.moveTo(0,y);g.lineTo(cv.width,y);g.stroke()}
+  rows.forEach((row,r)=>row.forEach((box,b)=>{
+    const ox=PAD+b*(BW+G),oy=PAD+r*(BH+G);
+    g.fillStyle='#fff';g.fillRect(ox,oy,BW,BH);
+    g.strokeStyle='#ddd';g.lineWidth=1;
+    for(let i=1;i<W;i++){g.beginPath();g.moveTo(ox+i*S,oy);g.lineTo(ox+i*S,oy+BH);g.stroke()}
+    for(let j=1;j<H;j++){g.beginPath();g.moveTo(ox,oy+j*S);g.lineTo(ox+BW,oy+j*S);g.stroke()}
+    box.forEach((v,i)=>{
+      if(!v)return;
+      g.fillStyle=COLORS[v];g.fillRect(ox+(i%W)*S,oy+Math.floor(i/W)*S,S,S);
+    });
+    g.strokeStyle='#000';g.lineWidth=2;g.strokeRect(ox,oy,BW,BH);
+  }));
+  return cv;
+}
+function download(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click()}
+document.getElementById('jpg').onclick=()=>download(drawCanvas().toDataURL('image/jpeg',0.95),'方塊簡譜.jpg');
+document.getElementById('pdf').onclick=()=>{
+  const cv=drawCanvas(),{jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:cv.width>cv.height?'l':'p',unit:'px',format:[cv.width,cv.height]});
+  pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,cv.width,cv.height);
+  pdf.save('方塊簡譜.pdf');
+};
+render();
+</script>
+</body>
+</html>
