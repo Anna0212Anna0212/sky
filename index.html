@@ -49,14 +49,15 @@ aside input[type=number]{width:52px}
     <button id="clear">清空全部</button>
     <h2 style="margin-top:12px">自動生成</h2>
     <button id="skyBtn">匯入光遇譜 .txt</button>
-    <button id="ptBtn">貼上譜文字</button>
+    <button id="ptBtn">貼上簡譜文字</button>
     <input type="file" id="skyFile" accept=".txt,.json" hidden>
     <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
     <div style="font-size:12px;color:#666">層次→顏色</div>
-    <label>第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
-    <label>第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
-    <label>第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
-    <button id="jpBtn">匯入數字簡譜</button>
+    <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
+    <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
+    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
+    <button id="trimBtn">刪除空白方塊</button>
+    <button id="undoBtn" hidden>復原</button>
     <span id="msg" style="font-size:12px;color:#c33"></span>
     <p style="font-size:12px;color:#888;margin:6px 0 0">點一下或拖曳塗色；對同色格再點一次可擦除。</p>
   </aside>
@@ -70,20 +71,17 @@ aside input[type=number]{width:52px}
   <p style="font-size:12.5px;margin:0 0 8px;line-height:1.6">支援：<br>
   ① Sky Studio JSON（.txt 內容）<br>
   ② 方格文字：<code>. . A1A3B1 . B4</code>（A/B/C＝上/中/下排，1–5＝左到右，<b>.</b>＝休止）<br>
-  ③ 數字＋字母：<code>6 15 j 10 14 l d</code>（數字＝鍵 1–15，字母＝節拍）</p>
+  ③ 數字＋字母：<code>6 15 j 10 14 l d</code>（數字＝鍵 1–15，字母＝節拍）<br>
+  ④ 數字簡譜：<code>1 3+5 0 6' 2'+4'</code>（空格＝一個方塊，<b>+</b>和弦，<b>0</b>休止，<b>'</b>高八度，<b>,</b>低八度）</p>
+  <label style="font-size:13px">格式 <select id="fmt"><option value="auto">自動</option><option value="jp">數字簡譜</option><option value="nl">數字＋字母</option></select></label>
+  <label style="font-size:13px;margin-left:8px">④ 無記號的 1 = 第 <input type="number" id="base" min="0" max="14" value="0" style="width:48px"> 鍵</label>
   <textarea id="ptText" rows="9" style="width:100%;font-size:14px"></textarea>
   <label style="font-size:13px;display:block;margin-top:6px">③ 字母佔幾格（字母=格數，逗號分隔）
     <input id="letters" value="j=2,l=1,d=1,g=2" style="width:100%"></label>
   <div style="font-size:12px;color:#666">數字後接字母＝該和弦佔幾格；單獨的字母＝休止幾格。</div>
   <div style="margin-top:10px;text-align:right"><button id="ptCancel">取消</button> <button id="ptGo">產生</button></div>
 </dialog>
-<dialog id="jp">
-  <h3 style="margin:0 0 8px">數字簡譜 → 方塊</h3>
-  <p style="font-size:13px;margin:0 0 8px">空格分隔＝每個方塊；和弦用 <b>+</b>；<b>0</b>＝休止；<b>'</b> 高八度、<b>,</b> 低八度。<br>例：<code>1 3+5 0 6' 2'+4'</code>（可用 | 分小節）</p>
-  <textarea id="jpText" rows="8" style="width:100%;font-size:15px"></textarea>
-  <label style="font-size:13px">無記號的 1 = 第 <input type="number" id="base" min="0" max="14" value="0" style="width:52px"> 鍵（0 最低，14 最高）</label>
-  <div style="margin-top:10px;text-align:right"><button id="jpCancel">取消</button> <button id="jpGo">產生</button></div>
-</dialog>
+
 <script>
 const W=5,H=3,KEY='fangkuai-score-v1';
 let tool=1,cols=6,rows=[],painting=false,paintVal=1;
@@ -219,7 +217,7 @@ function importAny(raw){
     if(!Array.isArray(d.songNotes))throw new Error('不是光遇譜格式');
     sky=d;$('unit').value='';convertSky();return;
   }
-  const toks=t.split(/\s+/);sky=null;
+  const toks=t.split(/[\s|]+/).filter(Boolean);sky=null;
   const gridRe=/^(?:[.\-_]+|(?:[A-C][1-5])+)$/i;
   if(toks.filter(x=>gridRe.test(x)).length/toks.length>0.8){
     const slots=toks.map(x=>{
@@ -228,6 +226,21 @@ function importAny(raw){
       return c;
     });
     if(fillBoxes(slots))msg('方格文字：已生成 '+slots.length+' 個方塊');
+    return;
+  }
+  const jpRe=/^[0-7](?:'+|,+)?(?:\+[0-7](?:'+|,+)?)*$/,fmt=$('fmt').value;
+  if(fmt==='jp'||(fmt==='auto'&&toks.every(x=>jpRe.test(x)))){
+    const base=+$('base').value||0,bad=new Set(),slots=toks.map(tok=>{
+      const c=Array(15).fill(0);
+      tok.split('+').forEach(n=>{
+        const x=/^([0-7])('*|,*)$/.exec(n);if(!x){bad.add(n);return}
+        if(x[1]==='0')return;
+        const o=x[2]?(x[2][0]==="'"?x[2].length:-x[2].length):0,i=base+(+x[1]-1)+7*o;
+        if(i<0||i>14)bad.add(n);else c[i]=1;
+      });
+      return c;
+    });
+    if(fillBoxes(slots))msg('簡譜：已生成 '+slots.length+' 個方塊'+(bad.size?'；超出音域：'+[...bad].join(' '):''));
     return;
   }
   // 數字＋字母
@@ -271,23 +284,19 @@ function convertSky(){
   for(let s=0;s<=max;s++)slots.push(m[s]?m[s].map(v=>col[v]):newBox());
   if(fillBoxes(slots))msg('已生成 '+slots.length+' 個方塊');
 }
-$('jpBtn').onclick=()=>$('jp').showModal();
-$('jpCancel').onclick=()=>$('jp').close();
-$('jpGo').onclick=()=>{
-  const base=+$('base').value||0,bad=[],slots=[];
-  $('jpText').value.split(/[\s|]+/).filter(Boolean).forEach(tok=>{
-    const c=Array(15).fill(0);
-    tok.split('+').forEach(n=>{
-      const x=/^([0-7])('*|,*)$/.exec(n);if(!x){bad.push(n);return}
-      if(x[1]==='0')return;
-      const o=x[2]?(x[2][0]==="'"?x[2].length:-x[2].length):0;
-      const i=base+(+x[1]-1)+7*o;
-      if(i<0||i>14)bad.push(n);else c[i]=1;
-    });
-    slots.push(c);
-  });
-  if(!slots.length)return;
-  if(fillBoxes(slots)){$('jp').close();msg(bad.length?'無法對應：'+[...new Set(bad)].join(' '):'已生成 '+slots.length+' 個方塊')}
+let backup=null;
+$('trimBtn').onclick=()=>{
+  const all=rows.flat(),kept=all.filter(b=>b.some(v=>v)),n=all.length-kept.length;
+  if(!n){msg('沒有空白方塊');return}
+  if(!kept.length){msg('整份都是空白，未刪除');return}
+  backup=JSON.stringify({cols,rows});
+  rows=Array.from({length:Math.ceil(kept.length/cols)},newRow);
+  kept.forEach((b,i)=>{rows[Math.floor(i/cols)][i%cols]=b});
+  save();render();msg('已刪除 '+n+' 個空白方塊');$('undoBtn').hidden=false;
+};
+$('undoBtn').onclick=()=>{
+  if(!backup)return;const o=JSON.parse(backup);rows=o.rows;cols=o.cols;
+  save();render();$('undoBtn').hidden=true;backup=null;msg('已復原');
 };
 render();
 </script>
