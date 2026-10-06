@@ -201,7 +201,6 @@ document.getElementById('pdf').onclick = () => {
         pageRows.push(rows.slice(i, i + ROWS_PER_PAGE));
     }
 
-    // 防止沒有資料
     if (pageRows.length === 0) return;
 
     let pdf = null;
@@ -277,24 +276,24 @@ document.getElementById('pdf').onclick = () => {
 
         const img = cv.toDataURL('image/jpeg', 0.95);
 
-        // 第一頁直接使用 Canvas 尺寸建立 PDF
+        // 第一次先建立一個暫時頁面
         if (pageIndex === 0) {
 
             pdf = new jsPDF({
                 orientation: 'p',
                 unit: 'px',
-                format: [cv.width, cv.height]
+                format: [10, 10]
             });
 
-        } else {
-
-            // 後面的頁面使用相同的 Canvas 尺寸
-            pdf.addPage(
-                [cv.width, cv.height],
-                'p'
-            );
-
+            // 刪掉 jsPDF 自動建立的第一頁
+            pdf.deletePage(1);
         }
+
+        // 每一頁都用相同方式新增自訂尺寸
+        pdf.addPage(
+            [cv.width, cv.height],
+            'p'
+        );
 
         pdf.addImage(
             img,
