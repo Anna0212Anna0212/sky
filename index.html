@@ -182,11 +182,118 @@ function drawCanvas(){
 }
 function download(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click()}
 document.getElementById('jpg').onclick=()=>download(drawCanvas().toDataURL('image/jpeg',0.95),'方塊簡譜.jpg');
-document.getElementById('pdf').onclick=()=>{
-  const cv=drawCanvas(),{jsPDF}=window.jspdf;
-  const pdf=new jsPDF({orientation:cv.width>cv.height?'l':'p',unit:'px',format:[cv.width,cv.height]});
-  pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,cv.width,cv.height);
-  pdf.save('方塊簡譜.pdf');
+document.getElementById('pdf').onclick = () => {
+
+    const { jsPDF } = window.jspdf;
+
+    const ROWS_PER_PAGE = 80;
+
+    const S = 36;
+    const G = 20;
+    const PAD = 24;
+
+    const BW = W * S;
+    const BH = H * S;
+
+    const pageRows = [];
+
+    for (let i = 0; i < rows.length; i += ROWS_PER_PAGE) {
+        pageRows.push(rows.slice(i, i + ROWS_PER_PAGE));
+    }
+
+    const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'px'
+    });
+
+    pageRows.forEach((pageData, pageIndex) => {
+
+        const cv = document.createElement('canvas');
+
+        cv.width =
+            PAD * 2 +
+            cols * BW +
+            (cols - 1) * G;
+
+        cv.height =
+            PAD * 2 +
+            pageData.length * BH +
+            (pageData.length - 1) * G;
+
+        const g = cv.getContext('2d');
+
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, cv.width, cv.height);
+
+        pageData.forEach((row, r) => {
+
+            row.forEach((box, b) => {
+
+                const ox = PAD + b * (BW + G);
+                const oy = PAD + r * (BH + G);
+
+                g.fillStyle = '#fff';
+                g.fillRect(ox, oy, BW, BH);
+
+                g.strokeStyle = '#ddd';
+                g.lineWidth = 1;
+
+                for (let i = 1; i < W; i++) {
+                    g.beginPath();
+                    g.moveTo(ox + i * S, oy);
+                    g.lineTo(ox + i * S, oy + BH);
+                    g.stroke();
+                }
+
+                for (let j = 1; j < H; j++) {
+                    g.beginPath();
+                    g.moveTo(ox, oy + j * S);
+                    g.lineTo(ox + BW, oy + j * S);
+                    g.stroke();
+                }
+
+                box.forEach((v, i) => {
+
+                    if (!v) return;
+
+                    g.fillStyle = COLORS[v];
+
+                    g.fillRect(
+                        ox + (i % W) * S,
+                        oy + Math.floor(i / W) * S,
+                        S,
+                        S
+                    );
+
+                });
+
+                g.strokeStyle = '#000';
+                g.lineWidth = 2;
+                g.strokeRect(ox, oy, BW, BH);
+
+            });
+
+        });
+
+        const img = cv.toDataURL('image/jpeg', 0.95);
+
+        if (pageIndex > 0) {
+            pdf.addPage([cv.width, cv.height], 'p');
+        }
+
+        pdf.addImage(
+            img,
+            'JPEG',
+            0,
+            0,
+            cv.width,
+            cv.height
+        );
+
+    });
+
+    pdf.save('方塊簡譜.pdf');
+
 };
 
 // ---- 自動生成 ----
