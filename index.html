@@ -14,7 +14,7 @@ header h1{font-size:18px;margin:0}
 button{font:inherit;padding:6px 12px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
 button:hover{background:#eee}
 main{flex:1;display:flex;min-height:0}
-aside{width:150px;padding:14px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+aside{width:170px;overflow:auto;padding:14px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 aside h2{font-size:14px;margin:0 0 4px;color:#666}
 .tool{display:flex;align-items:center;gap:8px;text-align:left}
 .tool.on{outline:2px solid #4a90e2;background:#eef5ff}
@@ -47,6 +47,16 @@ aside input[type=number]{width:52px}
     <h2 style="margin-top:12px">版面</h2>
     <label>每列譜數 <input type="number" id="cols" min="1" max="12" value="6"></label>
     <button id="clear">清空全部</button>
+    <h2 style="margin-top:12px">自動生成</h2>
+    <button id="skyBtn">匯入光遇譜 .txt</button>
+    <input type="file" id="skyFile" accept=".txt,.json" hidden>
+    <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
+    <div style="font-size:12px;color:#666">層次→顏色</div>
+    <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
+    <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
+    <label>兩層同時 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
+    <button id="jpBtn">匯入數字簡譜</button>
+    <span id="msg" style="font-size:12px;color:#c33"></span>
     <p style="font-size:12px;color:#888;margin:6px 0 0">點一下或拖曳塗色；對同色格再點一次可擦除。</p>
   </aside>
   <div id="wrap">
@@ -54,6 +64,13 @@ aside input[type=number]{width:52px}
     <div id="bar"><button id="addRow">＋ 向下新增一列</button></div>
   </div>
 </main>
+<dialog id="jp">
+  <h3 style="margin:0 0 8px">數字簡譜 → 方塊</h3>
+  <p style="font-size:13px;margin:0 0 8px">空格分隔＝每個方塊；和弦用 <b>+</b>；<b>0</b>＝休止；<b>'</b> 高八度、<b>,</b> 低八度。<br>例：<code>1 3+5 0 6' 2'+4'</code>（可用 | 分小節）</p>
+  <textarea id="jpText" rows="8" style="width:100%;font-size:15px"></textarea>
+  <label style="font-size:13px">無記號的 1 = 第 <input type="number" id="base" min="0" max="14" value="0" style="width:52px"> 鍵（0 最低，14 最高）</label>
+  <div style="margin-top:10px;text-align:right"><button id="jpCancel">取消</button> <button id="jpGo">產生</button></div>
+</dialog>
 <script>
 const W=5,H=3,KEY='fangkuai-score-v1';
 let tool=1,cols=6,rows=[],painting=false,paintVal=1;
@@ -148,6 +165,75 @@ document.getElementById('pdf').onclick=()=>{
   const pdf=new jsPDF({orientation:cv.width>cv.height?'l':'p',unit:'px',format:[cv.width,cv.height]});
   pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,cv.width,cv.height);
   pdf.save('方塊簡譜.pdf');
+};
+
+// ---- 自動生成 ----
+const $=id=>document.getElementById(id),msg=t=>$('msg').textContent=t||'';
+const hasContent=()=>rows.some(r=>r.some(b=>b.some(v=>v)));
+function fillBoxes(slots){
+  if(hasContent()&&!confirm('會取代目前的樂譜，確定嗎？'))return false;
+  const n=Math.max(1,Math.ceil(slots.length/cols));
+  rows=Array.from({length:n},newRow);
+  slots.forEach((c,i)=>{rows[Math.floor(i/cols)][i%cols]=c});
+  save();render();return true;
+}
+function readText(buf){
+  const u=new Uint8Array(buf);let enc='utf-8';
+  if(u[0]===0xFF&&u[1]===0xFE)enc='utf-16le';else if(u[0]===0xFE&&u[1]===0xFF)enc='utf-16be';
+  return new TextDecoder(enc).decode(buf).replace(/^\uFEFF/,'');
+}
+let sky=null;
+$('skyBtn').onclick=()=>$('skyFile').click();
+$('skyFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    let d=JSON.parse(readText(await f.arrayBuffer()));if(Array.isArray(d))d=d[0];
+    if(d.isEncrypted)throw new Error('此譜已加密，無法讀取');
+    if(!Array.isArray(d.songNotes))throw new Error('不是光遇譜格式');
+    sky=d;$('unit').value='';convertSky();
+  }catch(err){msg('讀取失敗：'+err.message)}
+  e.target.value='';
+};
+$('unit').onchange=()=>{if(sky)convertSky()};
+['m1','m2','m3'].forEach(i=>$(i).onchange=()=>{if(sky)convertSky()});
+function convertSky(){
+  const notes=sky.songNotes;
+  let unit=+$('unit').value;
+  if(!unit){ // 自動：取相鄰時間差的眾數
+    const ts=[...new Set(notes.map(n=>n.time))].sort((a,b)=>a-b),cnt={};
+    for(let i=1;i<ts.length;i++){const d=ts[i]-ts[i-1];cnt[d]=(cnt[d]||0)+1}
+    unit=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||250;
+    $('unit').value=unit;
+  }
+  const col=[0,+$('m1').value,+$('m2').value,+$('m3').value];
+  const m={};let max=0;
+  notes.forEach(n=>{
+    const x=/^(\d)Key(\d+)$/.exec(n.key);if(!x)return;
+    const k=+x[2];if(k>14)return;
+    const s=Math.round(n.time/unit);max=Math.max(max,s);
+    (m[s]=m[s]||Array(15).fill(0))[k]|=(+x[1]===1?1:2);
+  });
+  const slots=[];
+  for(let s=0;s<=max;s++)slots.push(m[s]?m[s].map(v=>col[v]):newBox());
+  if(fillBoxes(slots))msg('已生成 '+slots.length+' 個方塊');
+}
+$('jpBtn').onclick=()=>$('jp').showModal();
+$('jpCancel').onclick=()=>$('jp').close();
+$('jpGo').onclick=()=>{
+  const base=+$('base').value||0,bad=[],slots=[];
+  $('jpText').value.split(/[\s|]+/).filter(Boolean).forEach(tok=>{
+    const c=Array(15).fill(0);
+    tok.split('+').forEach(n=>{
+      const x=/^([0-7])('*|,*)$/.exec(n);if(!x){bad.push(n);return}
+      if(x[1]==='0')return;
+      const o=x[2]?(x[2][0]==="'"?x[2].length:-x[2].length):0;
+      const i=base+(+x[1]-1)+7*o;
+      if(i<0||i>14)bad.push(n);else c[i]=1;
+    });
+    slots.push(c);
+  });
+  if(!slots.length)return;
+  if(fillBoxes(slots)){$('jp').close();msg(bad.length?'無法對應：'+[...new Set(bad)].join(' '):'已生成 '+slots.length+' 個方塊')}
 };
 render();
 </script>
