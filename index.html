@@ -139,7 +139,18 @@ addEventListener('keydown',e=>{
 setTool(1);
 
 document.getElementById('addRow').onclick=()=>{rows.push(newRow());save();render()};
-document.getElementById('clear').onclick=()=>{if(confirm('確定清空全部樂譜？')){rows=rows.map(()=>newRow());save();render()}};
+document.getElementById('clear').onclick = () => {
+    if (!confirm('確定清空全部樂譜？')) return;
+
+    rows.forEach((row, index) => {
+        rows[index] = newRow();
+    });
+
+    rows.splice(1);
+
+    save();
+    render();
+};
 document.getElementById('cols').onchange=e=>{
   const n=Math.max(1,Math.min(12,+e.target.value||6));
   rows=rows.map(r=>{const a=r.slice(0,n);while(a.length<n)a.push(newBox());return a});
