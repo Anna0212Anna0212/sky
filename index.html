@@ -201,10 +201,10 @@ document.getElementById('pdf').onclick = () => {
         pageRows.push(rows.slice(i, i + ROWS_PER_PAGE));
     }
 
-    const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'px'
-    });
+    // 防止沒有資料
+    if (pageRows.length === 0) return;
+
+    let pdf = null;
 
     pageRows.forEach((pageData, pageIndex) => {
 
@@ -277,8 +277,23 @@ document.getElementById('pdf').onclick = () => {
 
         const img = cv.toDataURL('image/jpeg', 0.95);
 
-        if (pageIndex > 0) {
-            pdf.addPage([cv.width, cv.height], 'p');
+        // 第一頁直接使用 Canvas 尺寸建立 PDF
+        if (pageIndex === 0) {
+
+            pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'px',
+                format: [cv.width, cv.height]
+            });
+
+        } else {
+
+            // 後面的頁面使用相同的 Canvas 尺寸
+            pdf.addPage(
+                [cv.width, cv.height],
+                'p'
+            );
+
         }
 
         pdf.addImage(
