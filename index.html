@@ -30,12 +30,15 @@ aside input[type=number]{width:52px}
 .c[data-v="1"]{background:#000}.c[data-v="2"]{background:#f00}.c[data-v="3"]{background:#1ba7e6}
 .rm{opacity:.35;padding:2px 6px}.rm:hover{opacity:1}
 #bar{margin-top:6px;display:flex;gap:8px}
+.fld{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:7px 0;font-size:13px}
+.fld input:not([type=checkbox]),.fld select{width:58%}
+#tx{min-width:360px}
 </style>
 </head>
 <body>
 <header>
   <h1>♫ 我的方塊簡譜</h1>
-  <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button></div>
+  <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button> <button id="txt">匯出 TXT</button></div>
 </header>
 <main>
   <aside>
@@ -56,6 +59,7 @@ aside input[type=number]{width:52px}
     <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
     <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
     <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
+    <button id="mergeBtn" title="把連續的方塊疊成 黑→紅→藍 三層">方塊合併</button>
     <button id="trimBtn">刪除空白方塊</button>
     <button id="undoBtn" hidden>復原</button>
     <span id="msg" style="font-size:12px;color:#c33"></span>
@@ -82,14 +86,30 @@ aside input[type=number]{width:52px}
   <div style="margin-top:10px;text-align:right"><button id="ptCancel">取消</button> <button id="ptGo">產生</button></div>
 </dialog>
 
+<dialog id="tx">
+  <h3 style="margin:0 0 6px">匯出 TXT（光遇譜格式）</h3>
+  <div style="font-size:12px;color:#666;margin-bottom:6px;line-height:1.5">都不是必填；沒填或不知道的會用預設值（匯入過光遇譜則沿用原本的資訊）。</div>
+  <label class="fld">歌名 <input id="tName"></label>
+  <label class="fld">作者 author <input id="tAuthor"></label>
+  <label class="fld">抄譜者 transcribedBy <input id="tBy"></label>
+  <label class="fld">BPM <input id="tBpm" type="number" min="1"></label>
+  <label class="fld">每方塊間隔 ms <input id="tMs" type="number" min="1"></label>
+  <label class="fld">bitsPerPage <input id="tBits" type="number" min="1"></label>
+  <label class="fld">音高 pitchLevel <input id="tPitch" type="number"></label>
+  <label class="fld">isComposed（作曲模式） <input id="tComposed" type="checkbox"></label>
+  <label class="fld">顏色解讀 <select id="tSeq"><option value="seq">黑→紅→藍 依序彈奏（合併後）</option><option value="flat">忽略顏色，同方塊同時按</option></select></label>
+  <label class="fld">檔案編碼 <select id="tEnc"><option value="8">UTF-8</option><option value="16">UTF-16 LE（光遇原生）</option></select></label>
+  <div style="text-align:right;margin-top:10px"><button id="tCancel">取消</button> <button id="tGo">匯出</button></div>
+</dialog>
+
 <script>
 const W=5,H=3,KEY='fangkuai-score-v1';
-let tool=1,cols=6,rows=[],painting=false,paintVal=1;
+let tool=1,cols=6,rows=[],painting=false,paintVal=1,meta=null;
 const newBox=()=>Array(W*H).fill(0);
 const newRow=()=>Array.from({length:cols},newBox);
-try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.rows){rows=s.rows;cols=s.cols}}catch(e){}
+try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.rows){rows=s.rows;cols=s.cols;meta=s.meta||null}}catch(e){}
 if(!rows.length)rows=[newRow(),newRow(),newRow(),newRow()];
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({cols,rows}))}catch(e){}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({cols,rows,meta}))}catch(e){}};
 
 function render(){
   const sh=document.getElementById('sheet');sh.innerHTML='';
@@ -132,7 +152,7 @@ function setTool(t){
 }
 document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>setTool(+b.dataset.t));
 addEventListener('keydown',e=>{
-  if(e.target.tagName==='INPUT')return;
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
   const m={'1':1,'2':2,'3':3,'4':0,'0':0};
   if(e.key in m)setTool(m[e.key]);
 });
@@ -153,7 +173,13 @@ document.getElementById('clear').onclick = () => {
 };
 document.getElementById('cols').onchange=e=>{
   const n=Math.max(1,Math.min(12,+e.target.value||6));
-  rows=rows.map(r=>{const a=r.slice(0,n);while(a.length<n)a.push(newBox());return a});
+  if(n===cols){render();return}
+  // 把所有方塊依序攤平，再依新的每列譜數重新排列（不丟棄、不產生多餘空白頁）
+  const all=rows.flat();
+  let last=-1;all.forEach((b,i)=>{if(b.some(v=>v))last=i});
+  const keep=last>=0?all.slice(0,last+1):all.slice(0,n); // 去掉尾端多餘的空白方塊
+  const nr=Math.max(1,Math.ceil(keep.length/n));
+  rows=Array.from({length:nr},(_,r)=>Array.from({length:n},(_,c)=>keep[r*n+c]||newBox()));
   cols=n;save();render();
 };
 
@@ -347,7 +373,7 @@ function importAny(raw){
     if(Array.isArray(d))d=d[0];
     if(!d||d.isEncrypted)throw new Error('此譜已加密或格式不明');
     if(!Array.isArray(d.songNotes))throw new Error('不是光遇譜格式');
-    sky=d;$('unit').value='';convertSky();return;
+    sky=d;meta={name:d.name,author:d.author,transcribedBy:d.transcribedBy,isComposed:d.isComposed,bpm:d.bpm,bitsPerPage:d.bitsPerPage,pitchLevel:d.pitchLevel};$('unit').value='';convertSky();return;
   }
   const toks=t.split(/[\s|]+/).filter(Boolean);sky=null;
   const gridRe=/^(?:[.\-_]+|(?:[A-C][1-5])+)$/i;
@@ -429,6 +455,88 @@ $('trimBtn').onclick=()=>{
 $('undoBtn').onclick=()=>{
   if(!backup)return;const o=JSON.parse(backup);rows=o.rows;cols=o.cols;
   save();render();$('undoBtn').hidden=true;backup=null;msg('已復原');
+};
+// ---- 方塊合併：連續方塊疊成 第1層黑 → 第2層紅 → 第3層藍 ----
+$('mergeBtn').onclick=()=>{
+  const all=rows.flat(),cnt=g=>g.reduce((a,v)=>a+v,0);
+  if(!all.some(b=>b.some(v=>v))){msg('沒有可合併的方塊');return}
+  const out=[];let grp=[];
+  const flush=()=>{
+    if(!grp.length)return;
+    const box=newBox();
+    grp.forEach((g,li)=>g.forEach((on,i)=>{if(on)box[i]=li+1}));
+    out.push(box);grp=[];
+  };
+  all.forEach(b=>{
+    const s=b.map(v=>v?1:0); // 已有顏色的一律當黑色判斷
+    if(!cnt(s)){flush();out.push(newBox());return} // 空白方塊(休止)不合併、原位保留
+    const ok=grp.length<3
+      &&!grp.some(g=>g.some((on,i)=>on&&s[i]))                 // 同一格不能重疊
+      &&grp.filter(g=>cnt(g)>1).length+(cnt(s)>1?1:0)<=1;      // 最多只有一層是2鍵以上
+    if(!ok)flush();
+    grp.push(s);
+  });
+  flush();
+  if(out.length>=all.length){msg('沒有可合併的方塊');return}
+  backup=JSON.stringify({cols,rows});
+  rows=Array.from({length:Math.ceil(out.length/cols)},newRow);
+  out.forEach((b,i)=>{rows[Math.floor(i/cols)][i%cols]=b});
+  save();render();msg('已合併：'+all.length+' → '+out.length+' 個方塊');$('undoBtn').hidden=false;
+};
+
+// ---- 匯出 TXT（光遇譜 JSON）----
+const num=(v,d)=>v!=null&&v!==''&&isFinite(+v)?+v:d;
+$('txt').onclick=()=>{
+  const m=meta||{};
+  $('tName').value=m.name||'方塊簡譜';
+  $('tAuthor').value=m.author||'Unknown';
+  $('tBy').value=m.transcribedBy||'Unknown';
+  $('tBpm').value=num(m.bpm,230);
+  $('tMs').value=+$('unit').value||(m.bpm>0?Math.round(60000/m.bpm):260);
+  $('tBits').value=num(m.bitsPerPage,16);
+  $('tPitch').value=num(m.pitchLevel,0);
+  $('tComposed').checked=m.isComposed!==false;
+  $('tx').showModal();
+};
+$('tBpm').oninput=()=>{const b=+$('tBpm').value;if(b>0)$('tMs').value=Math.round(60000/b)};
+$('tMs').oninput=()=>{const u=+$('tMs').value;if(u>0)$('tBpm').value=Math.round(60000/u)};
+$('tCancel').onclick=()=>$('tx').close();
+$('tGo').onclick=()=>{
+  const unit=+$('tMs').value>0?+$('tMs').value:260,seq=$('tSeq').value==='seq';
+  const notes=[];let step=0;
+  rows.flat().forEach(box=>{
+    const cs=seq?[1,2,3].filter(c=>box.includes(c)):[0]; // 依顏色展開成先後；或整個方塊同時
+    if(!cs.length){step++;return}
+    cs.forEach(c=>{
+      box.forEach((v,i)=>{if(v&&(!c||v===c))notes.push({time:Math.round(step*unit),key:'1Key'+i})});
+      step++;
+    });
+  });
+  $('tx').close();
+  if(!notes.length){msg('沒有音符可匯出');return}
+  const song={
+    name:$('tName').value.trim()||'方塊簡譜',
+    author:$('tAuthor').value.trim()||'Unknown',
+    transcribedBy:$('tBy').value.trim()||'Unknown',
+    isComposed:$('tComposed').checked,
+    bpm:num($('tBpm').value,230),
+    bitsPerPage:num($('tBits').value,16),
+    pitchLevel:num($('tPitch').value,0),
+    isEncrypted:false,
+    songNotes:notes
+  };
+  const text=JSON.stringify([song]);
+  let blob;
+  if($('tEnc').value==='16'){
+    const u=new Uint8Array(2+text.length*2);u[0]=0xFF;u[1]=0xFE;
+    for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);u[2+i*2]=c&255;u[3+i*2]=c>>8}
+    blob=new Blob([u],{type:'text/plain'});
+  }else blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  download(url,song.name.replace(/[\\/:*?"<>|]/g,'_')+'.txt');
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  const {songNotes,isEncrypted,...rest}=song;meta=rest;save();
+  msg('已匯出 '+notes.length+' 個音符');
 };
 render();
 </script>
