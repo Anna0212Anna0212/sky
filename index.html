@@ -85,7 +85,7 @@ aside input[type=number]{width:52px}
     <button id="clear">清空全部</button>
     </div>
     <h2 style="margin-top:12px">自動生成</h2>
-    <button id="skyBtn">匯入光遇譜 .txt</button>
+    <button id="skyBtn" title="支援一般與加密的光遇 .txt（自動解密）">匯入光遇譜 .txt</button>
     <button id="ptBtn">貼上簡譜文字</button>
     <input type="file" id="skyFile" accept=".txt,.json" hidden>
     <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
@@ -108,7 +108,7 @@ aside input[type=number]{width:52px}
 <dialog id="pt">
   <h3 style="margin:0 0 8px">貼上譜文字（自動辨識格式）</h3>
   <p style="font-size:12.5px;margin:0 0 8px;line-height:1.6">支援：<br>
-  ① Sky Studio JSON（.txt 內容）<br>
+  ① Sky Studio JSON（.txt 內容，<b>加密譜也可，會自動解密</b>）<br>
   ② 方格文字：<code>. . A1A3B1 . B4</code>（A/B/C＝上/中/下排，1–5＝左到右，<b>.</b>＝休止）<br>
   ③ 數字＋字母：<code>6 15 j 10 14 l d</code>（數字＝鍵 1–15，字母＝節拍）<br>
   ④ 數字簡譜：<code>1 3+5 0 6' 2'+4'</code>（空格＝一個方塊，<b>+</b>和弦，<b>0</b>休止，<b>'</b>高八度，<b>,</b>低八度）</p>
@@ -398,15 +398,35 @@ $('ptCancel').onclick=()=>$('pt').close();
 $('ptGo').onclick=()=>{
   try{importAny($('ptText').value);$('pt').close()}catch(err){msg('讀取失敗：'+err.message);$('pt').close()}
 };
+// ---- 光遇加密譜解密（isEncrypted:true，songNotes 為整數陣列）----
+const _SK=a=>a.map(v=>String.fromCharCode(v^0x5A)).join('');
+const SKY_KEY=_SK([0x0E,0x18,0x76,0x08,0x7C,0x0B,0x27,0x77,0x0F,0x16,0x1C,0x02,0x1C,0x6D,0x67,0x21,0x34,0x0F,0x6D,0x2C,0x65,0x3C,0x23,0x79,0x11,0x32,0x28,0x63,0x17,0x32,0x2F,0x2F]);
+const SKY_END=_SK([0x20,0x2E,0x18,0x05,0x31,0x3B,0x1C,0x3F,0x0B,0x3F,0x75,0x2D,0x3B,0x62,0x11,0x2B,0x21,0x28,0x05,0x30,0x20,0x7B,0x28,0x67,0x0A,0x07,0x73,0x32,0x0B,0x16,0x72,0x3C]);
+function decryptSky(song){
+  if(!Array.isArray(song.songNotes)||!song.songNotes.every(x=>typeof x==='number'))
+    throw new Error('加密譜的 songNotes 格式不正確');
+  let s='';
+  song.songNotes.forEach((v,i)=>{
+    const c=v-SKY_KEY.charCodeAt(i%SKY_KEY.length)+100;
+    s+=(c>=0&&c<0x110000)?String.fromCodePoint(c):'?';
+  });
+  const end=s.indexOf(SKY_END);if(end!==-1)s=s.slice(0,end);
+  let notes;
+  try{notes=JSON.parse(s)}catch(e){throw new Error('解密失敗：金鑰版本可能不同（keyVersion='+song.keyVersion+'）')}
+  if(!Array.isArray(notes))throw new Error('解密後不是音符陣列');
+  const out={...song,songNotes:notes,isEncrypted:false};delete out.keyVersion;
+  return out;
+}
 function importAny(raw){
   const t=raw.replace(/^\s*```.*$/gm,'').trim();
   if(!t)throw new Error('內容是空的');
   if(/^[\[{]/.test(t)){
     let d;try{d=JSON.parse(t)}catch(e){throw new Error('JSON 格式有誤')}
     if(Array.isArray(d)&&d.length&&d.every(x=>typeof x==='number'))
-      throw new Error('純數字陣列的對應規則不明，無法轉換');
+      throw new Error('純數字陣列缺少譜的外層資訊，請匯入完整的光遇 .txt');
     if(Array.isArray(d))d=d[0];
-    if(!d||d.isEncrypted)throw new Error('此譜已加密或格式不明');
+    if(d&&d.isEncrypted){d=decryptSky(d);msg('已自動解密加密譜：'+(d.name||''))}
+    if(!d)throw new Error('格式不明');
     if(!Array.isArray(d.songNotes))throw new Error('不是光遇譜格式');
     sky=d;meta={name:d.name,author:d.author,transcribedBy:d.transcribedBy,isComposed:d.isComposed,bpm:d.bpm,bitsPerPage:d.bitsPerPage,pitchLevel:d.pitchLevel};$('unit').value='';convertSky();return;
   }
