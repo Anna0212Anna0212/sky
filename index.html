@@ -89,10 +89,10 @@ aside input[type=number]{width:52px}
     <button id="ptBtn">貼上簡譜文字</button>
     <input type="file" id="skyFile" accept=".txt,.json" hidden>
     <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
-    <div style="font-size:12px;color:#666">層次→顏色</div>
+    <div id="layerOpts" hidden><div style="font-size:12px;color:#666">層次→顏色</div>
     <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
     <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
-    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
+    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label></div>
     <button id="mergeBtn" title="把連續的方塊疊成 黑→紅→藍 三層">方塊合併</button>
     <button id="trimBtn">刪除空白方塊</button>
     <button id="undoBtn" hidden>復原</button>
@@ -485,7 +485,9 @@ function convertSky(){
     unit=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||250;
     $('unit').value=unit;
   }
-  const col=[0,+$('m1').value,+$('m2').value,+$('m3').value];
+  // 光遇的 1Key/2Key 只是主音/次音，不代表層次 → 預設全部第1層（黑）。
+  // 之後若要讓使用者自選，把 #layerOpts 的 hidden 拿掉，並改回讀取 m1/m2/m3。
+  const col=[0,1,1,1];
   const m={};let max=0;
   notes.forEach(n=>{
     const x=/^(\d)Key(\d+)$/.exec(n.key);if(!x)return;
