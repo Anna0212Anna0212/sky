@@ -22,7 +22,21 @@ aside h2{font-size:14px;margin:0 0 4px;color:#666}
 .tool small{margin-left:auto;color:#888}
 aside label{font-size:13px;display:flex;justify-content:space-between;align-items:center}
 aside input[type=number]{width:52px}
-#wrap{flex:1;overflow:auto;padding:20px}
+[hidden]{display:none!important}
+#wrap,#nwrap{flex:1;overflow:auto;padding:20px}
+.tab.on{background:#4a90e2;color:#fff;border-color:#4a90e2}
+#nsheet{display:inline-block;background:#fff;padding:14px 18px;border:1px solid var(--line)}
+.nrow{position:relative;display:flex;margin:26px 0 12px;border-right:2px solid #000}
+.nlab{position:absolute;top:-17px;left:0;font-size:12px;color:#666}
+.nslot{width:50px;min-height:54px;padding:16px 0 4px;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none}
+.nslot.bs{border-left:2px solid #000}
+.nslot.sel{background:#e3f0ff;box-shadow:inset 0 0 0 2px #4a90e2}
+.nt{position:relative;font-size:22px;line-height:30px;font-weight:600;white-space:nowrap}
+.nt[data-d="1"]::before,.nt[data-d="2"]::before{content:'';position:absolute;top:1px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor}
+.nt[data-d="2"]::before{margin-left:-6px;box-shadow:8px 0 currentColor}
+#keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.kp{padding:8px 0}.kp .nt{font-size:17px;line-height:22px;font-weight:600}.kp.on{background:#cfe3ff;border-color:#4a90e2}
+.oct.on{background:#eef5ff;outline:2px solid #4a90e2}
 #sheet{display:inline-block;background:#fff;padding:14px;border:1px solid var(--line)}
 .row{display:flex;gap:14px;margin-bottom:14px;align-items:center}
 .box{display:grid;grid-template-columns:repeat(5,var(--cell));grid-template-rows:repeat(3,var(--cell));border:2px solid #000;background:#fff;touch-action:none}
@@ -37,19 +51,39 @@ aside input[type=number]{width:52px}
 </head>
 <body>
 <header>
-  <h1>♫ 我的方塊簡譜</h1>
+  <h1>♫ 我的簡譜</h1>
+  <div><button class="tab" id="tabSq">方塊譜</button> <button class="tab" id="tabNum">數字譜</button></div>
   <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button> <button id="txt">匯出 TXT</button></div>
 </header>
 <main>
   <aside>
+    <div id="sqTools" style="display:flex;flex-direction:column;gap:8px">
     <h2>工具</h2>
     <button class="tool" data-t="1"><span class="sw" style="background:#000"></span>黑色<small>1</small></button>
     <button class="tool" data-t="2"><span class="sw" style="background:#f00"></span>紅色<small>2</small></button>
     <button class="tool" data-t="3"><span class="sw" style="background:#1ba7e6"></span>藍色<small>3</small></button>
     <button class="tool" data-t="0"><span class="sw" style="background:#fff"></span>橡皮擦<small>4</small></button>
+    </div>
+    <div id="numTools" hidden style="display:flex;flex-direction:column;gap:8px">
+    <h2>數字譜輸入</h2>
+    <label>每節幾個音 <input type="number" id="nPer" min="1" max="16"></label>
+    <label>每列幾節 <input type="number" id="nBpr" min="1" max="8"></label>
+    <label>記譜 <select id="nStyle"><option value="dot">數字加點</option><option value="tick">'1 ''1</option><option value="abc">A1–C1</option></select></label>
+    <label>輸入後前進 <input type="checkbox" id="nAuto"></label>
+    <div id="nPos" style="font-size:12px;color:#666"></div>
+    <div id="keypad"></div>
+    <div style="display:flex;gap:4px"><button class="oct on" data-o="0" style="flex:1">1–7</button><button class="oct" data-o="1" style="flex:1">高</button><button class="oct" data-o="2" style="flex:1">超高</button></div>
+    <div style="display:flex;gap:4px"><button id="nPrev" style="flex:1">←</button><button id="nNext" style="flex:1">→</button></div>
+    <button id="nClear">清除此格（休止）</button>
+    <button id="nIns">前方插入空格</button>
+    <button id="nDel">刪除此格</button>
+    <p style="font-size:12px;color:#888;margin:2px 0">按鍵盤 1–7 輸入（↑↓換音域，Shift+數字＝和弦不前進，空白鍵/←→移動，Backspace清除）。每格同時按下的音會直向疊起。數字譜為單層；要多層請切到方塊譜按「方塊合併」。</p>
+    </div>
+    <div id="shared" style="display:flex;flex-direction:column;gap:8px">
     <h2 style="margin-top:12px">版面</h2>
     <label>每列譜數 <input type="number" id="cols" min="1" max="12" value="6"></label>
     <button id="clear">清空全部</button>
+    </div>
     <h2 style="margin-top:12px">自動生成</h2>
     <button id="skyBtn">匯入光遇譜 .txt</button>
     <button id="ptBtn">貼上簡譜文字</button>
@@ -65,6 +99,7 @@ aside input[type=number]{width:52px}
     <span id="msg" style="font-size:12px;color:#c33"></span>
     <p style="font-size:12px;color:#888;margin:6px 0 0">點一下或拖曳塗色；對同色格再點一次可擦除。</p>
   </aside>
+  <div id="nwrap" hidden><div id="nsheet"></div></div>
   <div id="wrap">
     <div id="sheet"></div>
     <div id="bar"><button id="addRow">＋ 向下新增一列</button></div>
@@ -111,7 +146,7 @@ try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.rows){rows=s.rows;cols
 if(!rows.length)rows=[newRow(),newRow(),newRow(),newRow()];
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({cols,rows,meta}))}catch(e){}};
 
-function render(){
+function renderSq(){
   const sh=document.getElementById('sheet');sh.innerHTML='';
   rows.forEach((row,r)=>{
     const rd=document.createElement('div');rd.className='row';
@@ -152,7 +187,7 @@ function setTool(t){
 }
 document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>setTool(+b.dataset.t));
 addEventListener('keydown',e=>{
-  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
+  if(mode==='num'||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
   const m={'1':1,'2':2,'3':3,'4':0,'0':0};
   if(e.key in m)setTool(m[e.key]);
 });
@@ -538,6 +573,133 @@ $('tGo').onclick=()=>{
   const {songNotes,isEncrypted,...rest}=song;meta=rest;save();
   msg('已匯出 '+notes.length+' 個音符');
 };
+
+// ================= 數字譜 =================
+let mode='sq',sel=0,oct=0;
+const nst={per:4,bpr:4,style:'dot',auto:true};
+try{const s=JSON.parse(localStorage.getItem('fangkuai-num-v1'));if(s){Object.assign(nst,s);mode=s.mode==='num'?'num':'sq'}}catch(e){}
+const nsave=()=>{try{localStorage.setItem('fangkuai-num-v1',JSON.stringify({...nst,mode}))}catch(e){}};
+const kLabel=k=>{const n=k%7+1,o=Math.floor(k/7),st=nst.style;return st==='abc'?'ABC'[o]+n:st==='tick'?"'".repeat(o)+n:''+n};
+function ntEl(k,v){const s=document.createElement('span');s.className='nt';s.textContent=kLabel(k);
+  if(nst.style==='dot')s.dataset.d=Math.floor(k/7);if(v)s.style.color=COLORS[v];return s}
+const notesOf=b=>(b||[]).map((v,k)=>v?{k,v}:null).filter(Boolean).sort((x,y)=>y.k-x.k); // 高音在上
+const lastIdx=a=>{let l=-1;a.forEach((b,i)=>{if(b.some(v=>v))l=i});return l};
+function setFlat(a){const n=Math.max(1,Math.ceil(a.length/cols));
+  rows=Array.from({length:n},(_,r)=>Array.from({length:cols},(_,c)=>a[r*cols+c]||newBox()))}
+function edit(fn,after){const a=rows.flat();while(a.length<=sel)a.push(newBox());fn(a);setFlat(a);if(after)after();save();render()}
+function toggleNote(k,adv){
+  let removed=false;
+  edit(a=>{const b=a[sel],nb=newBox();
+    b.forEach((v,i)=>{if(v)nb[i]=1}); // 編輯時該格一律壓成單層（黑）
+    removed=!!nb[k];nb[k]=removed?0:1;a[sel]=nb},
+    ()=>{if(adv&&nst.auto&&!removed)sel++});
+}
+const go=d=>{sel=Math.max(0,sel+d);render()};
+
+function renderNum(){
+  const box=$('nsheet');box.innerHTML='';
+  const a=rows.flat(),per=nst.per,rowN=per*nst.bpr;
+  const tot=Math.ceil(Math.max(lastIdx(a)+1,sel+1,1)/per)*per;
+  for(let s=0;s<tot;s+=rowN){
+    const r=document.createElement('div');r.className='nrow';
+    const lb=document.createElement('div');lb.className='nlab';lb.textContent='('+(Math.floor(s/per)+1)+')';r.appendChild(lb);
+    for(let i=s;i<Math.min(s+rowN,tot);i++){
+      const sl=document.createElement('div');sl.className='nslot'+((i-s)%per===0?' bs':'')+(i===sel?' sel':'');
+      notesOf(a[i]).forEach(n=>sl.appendChild(ntEl(n.k,n.v)));
+      sl.onclick=()=>{sel=i;render()};r.appendChild(sl);
+    }
+    box.appendChild(r);
+  }
+  const cur=notesOf(rows.flat()[sel]).map(n=>n.k),kp=$('keypad');kp.innerHTML='';
+  for(let k=0;k<15;k++){
+    const b=document.createElement('button');b.className='kp'+(cur.includes(k)?' on':'');b.tabIndex=-1;
+    b.appendChild(ntEl(k));b.onclick=()=>toggleNote(k,true);kp.appendChild(b);
+  }
+  $('nPos').textContent='第 '+(Math.floor(sel/per)+1)+' 節 · 第 '+(sel%per+1)+' 拍';
+  const c=box.querySelector('.sel');if(c)c.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function syncMode(){
+  const n=mode==='num';
+  $('sqTools').hidden=n;$('numTools').hidden=!n;$('wrap').hidden=n;$('nwrap').hidden=!n;
+  $('tabSq').classList.toggle('on',!n);$('tabNum').classList.toggle('on',n);
+  ['nPer','nBpr','nStyle'].forEach(id=>{});
+}
+function render(){if(mode==='num')renderNum();else renderSq();syncMode()}
+function setMode(m){mode=m;nsave();render()}
+$('tabSq').onclick=()=>setMode('sq');$('tabNum').onclick=()=>setMode('num');
+$('nPer').value=nst.per;$('nBpr').value=nst.bpr;$('nStyle').value=nst.style;$('nAuto').checked=nst.auto;
+$('nPer').onchange=e=>{nst.per=Math.max(1,Math.min(16,+e.target.value||4));e.target.value=nst.per;nsave();render()};
+$('nBpr').onchange=e=>{nst.bpr=Math.max(1,Math.min(8,+e.target.value||4));e.target.value=nst.bpr;nsave();render()};
+$('nStyle').onchange=e=>{nst.style=e.target.value;nsave();render()};
+$('nAuto').onchange=e=>{nst.auto=e.target.checked;nsave()};
+$('numTools').querySelectorAll('button').forEach(b=>b.addEventListener('pointerdown',e=>e.preventDefault()));
+$('nClear').onclick=()=>edit(a=>{a[sel]=newBox()});
+$('nDel').onclick=()=>edit(a=>{a.splice(sel,1)});
+$('nIns').onclick=()=>edit(a=>{a.splice(sel,0,newBox())});
+$('nPrev').onclick=()=>go(-1);$('nNext').onclick=()=>go(1);
+document.querySelectorAll('.oct').forEach(b=>b.onclick=()=>{oct=+b.dataset.o;document.querySelectorAll('.oct').forEach(x=>x.classList.toggle('on',x===b))});
+addEventListener('keydown',e=>{
+  if(mode!=='num'||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
+  const m=/^(?:Digit|Numpad)([1-7])$/.exec(e.code);
+  if(m){const k=oct*7+ +m[1]-1;if(k<15)toggleNote(k,!e.shiftKey);e.preventDefault();return}
+  if(e.key===' '||e.key==='ArrowRight'){go(1);e.preventDefault()}
+  else if(e.key==='ArrowLeft'){go(-1);e.preventDefault()}
+  else if(e.key==='ArrowUp'||e.key==='ArrowDown'){oct=Math.max(0,Math.min(2,oct+(e.key==='ArrowUp'?1:-1)));
+    document.querySelectorAll('.oct').forEach(x=>x.classList.toggle('on',+x.dataset.o===oct));e.preventDefault()}
+  else if(e.key==='Backspace'){const had=notesOf(rows.flat()[sel]).length;if(had)edit(a=>{a[sel]=newBox()});else go(-1);e.preventDefault()}
+});
+
+// ---- 數字譜匯出 ----
+const NSW=56,NLH=38,NPAD=30,NLB=22,NHD=14;
+function numLayout(){
+  const per=nst.per,rowN=per*nst.bpr,a=rows.flat();
+  const tot=Math.ceil(Math.max(lastIdx(a)+1,1)/per)*per,nr=Math.ceil(tot/rowN);
+  const rh=[];for(let r=0;r<nr;r++){let m=1;for(let i=r*rowN;i<Math.min((r+1)*rowN,tot);i++)m=Math.max(m,notesOf(a[i]).length);rh.push(NLB+NHD+m*NLH+14)}
+  return {per,rowN,a,tot,nr,rh};
+}
+// 畫第 r0 ~ r1-1 列（預設全部）
+function drawNumCanvas(r0=0,r1=Infinity){
+  const SW=NSW,LH=NLH,PAD=NPAD,LB=NLB,HD=NHD,{per,rowN,a,tot,nr,rh}=numLayout();
+  r1=Math.min(r1,nr);
+  const cv=document.createElement('canvas');cv.width=PAD*2+rowN*SW;cv.height=PAD*2+rh.slice(r0,r1).reduce((x,y)=>x+y,0);
+  const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  g.textAlign='center';g.textBaseline='middle';
+  let y=PAD;
+  for(let r=r0;r<r1;r++){
+    const s=r*rowN,e=Math.min(s+rowN,tot);
+    g.fillStyle='#666';g.font='14px sans-serif';g.textAlign='left';g.fillText('('+(Math.floor(s/per)+1)+')',PAD,y+8);g.textAlign='center';
+    g.strokeStyle='#000';g.lineWidth=2;
+    for(let i=s;i<=e;i++)if((i-s)%per===0||i===e){const x=PAD+(i-s)*SW;g.beginPath();g.moveTo(x,y+LB-4);g.lineTo(x,y+rh[r]-6);g.stroke()}
+    for(let i=s;i<e;i++){
+      const cx=PAD+(i-s)*SW+SW/2;
+      notesOf(a[i]).forEach((n,j)=>{
+        const cy=y+LB+HD+j*LH+LH/2;g.fillStyle=COLORS[n.v];g.font='bold 26px sans-serif';g.fillText(kLabel(n.k),cx,cy);
+        if(nst.style==='dot'){const o=Math.floor(n.k/7);for(let d=0;d<o;d++){g.beginPath();g.arc(cx+(d-(o-1)/2)*8,cy-17,2.6,0,7);g.fill()}}
+      });
+    }
+    y+=rh[r];
+  }
+  return cv;
+}
+{const jpgSq=$('jpg').onclick,pdfSq=$('pdf').onclick;
+ $('jpg').onclick=()=>mode==='num'?download(drawNumCanvas().toDataURL('image/jpeg',0.95),'數字譜.jpg'):jpgSq();
+ $('pdf').onclick=()=>{
+   if(mode!=='num')return pdfSq();
+   // 依高度分頁（避免超過 PDF／canvas 尺寸上限被裁掉）
+   const {jsPDF}=window.jspdf,L=numLayout(),MAXH=6000,pages=[];
+   let st=0,h=NPAD*2;
+   for(let r=0;r<L.nr;r++){if(r>st&&h+L.rh[r]>MAXH){pages.push([st,r]);st=r;h=NPAD*2}h+=L.rh[r]}
+   pages.push([st,L.nr]);
+   let pdf=null;
+   pages.forEach(([a,b])=>{
+     const cv=drawNumCanvas(a,b),w=cv.width,hh=cv.height;
+     if(!pdf){pdf=new jsPDF({unit:'px',format:[w,hh],orientation:w>hh?'l':'p'});}
+     else pdf.addPage([w,hh],w>hh?'l':'p');
+     pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,hh);
+   });
+   pdf.save('數字譜.pdf');
+  };}
+
 render();
 </script>
 </body>
