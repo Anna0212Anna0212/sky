@@ -23,6 +23,8 @@ aside h2{font-size:14px;margin:0 0 4px;color:#666}
 aside label{font-size:13px;display:flex;justify-content:space-between;align-items:center}
 aside input[type=number]{width:52px}
 [hidden]{display:none!important}
+.box.playing{outline:3px solid #f90;outline-offset:-3px}
+.nslot.playing{background:#ffe9b8}
 #wrap,#nwrap{flex:1;overflow:auto;padding:20px}
 .tab.on{background:#4a90e2;color:#fff;border-color:#4a90e2}
 #nsheet{display:inline-block;background:#fff;padding:14px 18px;border:1px solid var(--line)}
@@ -53,6 +55,13 @@ aside input[type=number]{width:52px}
 <header>
   <h1>♫ 我的簡譜</h1>
   <div><button class="tab" id="tabSq">方塊譜</button> <button class="tab" id="tabNum">數字譜</button></div>
+  <div id="playBox" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="playBtn">▶ 播放</button>
+    <label style="font-size:13px">1 = <select id="pKey"><option value="0">C</option><option value="1">D♭</option><option value="2">D</option><option value="3">E♭</option><option value="4">E</option><option value="5">F</option><option value="6">G♭</option><option value="7">G</option><option value="8">A♭</option><option value="9">A</option><option value="10">B♭</option><option value="11">B</option></select></label>
+    <select id="pInst" title="樂器"><option value="piano">鋼琴</option><option value="violin">提琴</option><option value="guitar">吉他</option><option value="harp">豎琴</option><option value="flute">長笛</option><option value="musicbox">八音盒</option></select>
+    <select id="pSpd" title="速度"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+    <label style="font-size:12px" title="每個方塊的紅、藍層依序播放（同 TXT 匯出）"><input type="checkbox" id="pSeq" checked>多層依序</label>
+  </div>
   <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button> <button id="txt">匯出 TXT</button></div>
 </header>
 <main>
@@ -89,10 +98,10 @@ aside input[type=number]{width:52px}
     <button id="ptBtn">貼上簡譜文字</button>
     <input type="file" id="skyFile" accept=".txt,.json" hidden>
     <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
-    <div id="layerOpts" hidden><div style="font-size:12px;color:#666">層次→顏色</div>
+    <div style="font-size:12px;color:#666">層次→顏色</div>
     <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
     <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
-    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label></div>
+    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
     <button id="mergeBtn" title="把連續的方塊疊成 黑→紅→藍 三層">方塊合併</button>
     <button id="trimBtn">刪除空白方塊</button>
     <button id="undoBtn" hidden>復原</button>
@@ -485,9 +494,7 @@ function convertSky(){
     unit=+Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||250;
     $('unit').value=unit;
   }
-  // 光遇的 1Key/2Key 只是主音/次音，不代表層次 → 預設全部第1層（黑）。
-  // 之後若要讓使用者自選，把 #layerOpts 的 hidden 拿掉，並改回讀取 m1/m2/m3。
-  const col=[0,1,1,1];
+  const col=[0,+$('m1').value,+$('m2').value,+$('m3').value];
   const m={};let max=0;
   notes.forEach(n=>{
     const x=/^(\d)Key(\d+)$/.exec(n.key);if(!x)return;
@@ -610,6 +617,7 @@ function setFlat(a){const n=Math.max(1,Math.ceil(a.length/cols));
   rows=Array.from({length:n},(_,r)=>Array.from({length:cols},(_,c)=>a[r*cols+c]||newBox()))}
 function edit(fn,after){const a=rows.flat();while(a.length<=sel)a.push(newBox());fn(a);setFlat(a);if(after)after();save();render()}
 function toggleNote(k,adv){
+  if(typeof previewKey==='function')previewKey(k);
   let removed=false;
   edit(a=>{const b=a[sel],nb=newBox();
     b.forEach((v,i)=>{if(v)nb[i]=1}); // 編輯時該格一律壓成單層（黑）
@@ -721,6 +729,97 @@ function drawNumCanvas(r0=0,r1=Infinity){
    });
    pdf.save('數字譜.pdf');
   };}
+
+
+// ================= 播放音樂 =================
+let ac=null,master=null,pTimer=null,pPrev=null;
+const SEMI=[0,2,4,5,7,9,11],PKEY='fangkuai-play-v1';
+const keyFreq=(k,tr)=>261.63*2**((SEMI[k%7]+12*Math.floor(k/7)+tr)/12); // 1=C 時最低音為 C4
+function initAudio(){
+  if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();
+  if(ac.state==='suspended')ac.resume();
+  if(!master){master=ac.createGain();master.gain.value=.45;
+    const c=ac.createDynamicsCompressor();master.connect(c);c.connect(ac.destination)}
+}
+const ksCache={};
+function ksBuf(f,damp,dur){ // Karplus-Strong 撥弦
+  const key=f.toFixed(2)+'|'+damp;if(ksCache[key])return ksCache[key];
+  const sr=ac.sampleRate,N=Math.max(2,Math.round(sr/f)),len=Math.floor(sr*dur),b=ac.createBuffer(1,len,sr),d=b.getChannelData(0);
+  for(let i=0;i<N;i++)d[i]=Math.random()*2-1;
+  for(let i=N;i<len;i++)d[i]=damp*.5*(d[i-N]+d[i-N+1]);
+  return ksCache[key]=b;
+}
+function playNote(k,t,dur){
+  const f=keyFreq(k,+$('pKey').value),inst=$('pInst').value,g=ac.createGain();let out=g;
+  const osc=(type,fr,vol)=>{const o=ac.createOscillator(),v=ac.createGain();o.type=type;o.frequency.value=fr;v.gain.value=vol;o.connect(v);v.connect(g);return o};
+  const vib=(o,hz,depth)=>{const l=ac.createOscillator(),lg=ac.createGain();l.frequency.value=hz;lg.gain.value=f*depth;l.connect(lg);lg.connect(o.frequency);return l};
+  let os=[],end;
+  if(inst==='guitar'||inst==='harp'){
+    const s=ac.createBufferSource();s.buffer=ksBuf(f,inst==='harp'?.9985:.996,inst==='harp'?2.6:1.8);
+    end=t+(inst==='harp'?2.6:1.8);g.gain.setValueAtTime(.9,t);g.gain.linearRampToValueAtTime(0,end);s.connect(g);s.start(t);
+  }else if(inst==='violin'){
+    const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.min(3500,f*6);g.connect(lp);out=lp;
+    const o=osc('sawtooth',f,.5);os=[o,vib(o,5.5,.007)];
+    const hold=t+Math.max(dur,.35);end=hold+.25;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.4,t+.12);g.gain.setValueAtTime(.4,hold);g.gain.linearRampToValueAtTime(0,end);
+  }else if(inst==='flute'){
+    const o=osc('sine',f,1);os=[o,osc('sine',2*f,.15),vib(o,5,.004)];
+    const hold=t+Math.max(dur,.3);end=hold+.15;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.5,t+.06);g.gain.setValueAtTime(.5,hold);g.gain.linearRampToValueAtTime(0,end);
+  }else if(inst==='musicbox'){
+    os=[osc('sine',f,1),osc('sine',3*f,.3),osc('sine',4*f,.15)];end=t+1.4;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.5,t+.003);g.gain.exponentialRampToValueAtTime(.001,end);
+  }else{ // piano
+    os=[osc('triangle',f,.6),osc('sine',2*f,.25),osc('sine',3*f,.1)];end=t+1.8;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.5,t+.005);g.gain.exponentialRampToValueAtTime(.001,end);
+  }
+  out.connect(master);os.forEach(o=>{o.start(t);o.stop(end+.05)});
+}
+function playSteps(from){ // 與 TXT 匯出一致：每個方塊依 黑→紅→藍 展開成先後
+  const steps=[];
+  rows.flat().forEach((box,bi)=>{
+    if(bi<from)return;
+    const cs=$('pSeq').checked?[1,2,3].filter(c=>box.includes(c)):[0];
+    if(!cs.length){steps.push({bi,keys:[]});return}
+    cs.forEach(c=>steps.push({bi,keys:box.map((v,i)=>v&&(!c||v===c)?i:-1).filter(i=>i>=0)}));
+  });
+  return steps;
+}
+function hlPlay(bi){
+  if(pPrev)pPrev.classList.remove('playing');
+  const list=mode==='num'?document.querySelectorAll('.nslot'):document.querySelectorAll('#sheet .box');
+  pPrev=list[bi]||null;
+  if(pPrev){pPrev.classList.add('playing');pPrev.scrollIntoView({block:'nearest',inline:'nearest'})}
+}
+function stopPlay(){
+  clearInterval(pTimer);pTimer=null;
+  if(pPrev){pPrev.classList.remove('playing');pPrev=null}
+  if(master){const m=master;m.gain.setTargetAtTime(0,ac.currentTime,.03);setTimeout(()=>m.disconnect(),400);master=null}
+  $('playBtn').textContent='▶ 播放';
+}
+function startPlay(){
+  initAudio();
+  const steps=playSteps(mode==='num'?sel:0);
+  if(!steps.some(s=>s.keys.length)){msg('沒有音符可播放');return}
+  const spd=+$('pSpd').value||1;
+  const unit=((+$('unit').value||(meta&&meta.bpm>0?Math.round(60000/meta.bpm):260)))/spd/1000;
+  const t0=ac.currentTime+.15;let i=0,cur=-1;
+  $('playBtn').textContent='⏹ 停止';
+  pTimer=setInterval(()=>{
+    while(i<steps.length&&t0+i*unit<ac.currentTime+.3){
+      steps[i].keys.forEach(k=>playNote(k,t0+i*unit,unit));i++;
+    }
+    const c=Math.floor((ac.currentTime-t0)/unit);
+    if(c!==cur&&c>=0&&c<steps.length){cur=c;hlPlay(steps[c].bi)}
+    if(ac.currentTime>t0+steps.length*unit+.8)stopPlay();
+  },40);
+}
+$('playBtn').onclick=()=>pTimer?stopPlay():startPlay();
+function previewKey(k){initAudio();playNote(k,ac.currentTime+.01,.4)}
+try{const p=JSON.parse(localStorage.getItem(PKEY));if(p){['pKey','pInst','pSpd'].forEach(id=>{if(p[id]!=null)$(id).value=p[id]});$('pSeq').checked=p.pSeq!==false}}catch(e){}
+['pKey','pInst','pSpd','pSeq'].forEach(id=>$(id).onchange=()=>{
+  try{localStorage.setItem(PKEY,JSON.stringify({pKey:$('pKey').value,pInst:$('pInst').value,pSpd:$('pSpd').value,pSeq:$('pSeq').checked}))}catch(e){}
+});
 
 render();
 </script>
