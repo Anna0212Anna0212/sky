@@ -3,26 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>我的方塊簡譜</title>
+<title>My Block Score</title>
 <link rel="icon" type="image/png" sizes="512x512" href="./image.png">
 <link rel="apple-touch-icon" sizes="512x512" href="./image.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--bg:#f4f4f2;--panel:#fff;--ink:#222;--line:#d9d9d9;--cell:22px}
 *{box-sizing:border-box}
-body{margin:0;font-family:"Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+body{margin:0;font-family:"Noto Sans TC","Noto Sans JP",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 14px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
 header h1{font-size:18px;margin:0}
 button{font:inherit;padding:6px 12px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
 button:hover{background:#eee}
 main{flex:1;display:flex;min-height:0}
-aside{width:170px;overflow:auto;padding:14px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+aside{width:210px;flex-shrink:0;overflow:auto;padding:14px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
 aside h2{font-size:14px;margin:0 0 4px;color:#666}
 .tool{display:flex;align-items:center;gap:8px;text-align:left}
 .tool.on{outline:2px solid #4a90e2;background:#eef5ff}
 .sw{width:18px;height:18px;border:1px solid #888;display:inline-block}
 .tool small{margin-left:auto;color:#888}
-aside label{font-size:13px;display:flex;justify-content:space-between;align-items:center}
+aside label{font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+#langSel{font:inherit;font-size:13px;padding:5px 6px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
 aside input[type=number]{width:52px}
 [hidden]{display:none!important}
 .box.playing{outline:3px solid #f90;outline-offset:-3px}
@@ -55,100 +56,264 @@ aside input[type=number]{width:52px}
 </head>
 <body>
 <header>
-  <h1>♫ 我的簡譜</h1>
-  <div><button class="tab" id="tabSq">方塊譜</button> <button class="tab" id="tabNum">數字譜</button></div>
-  <div id="playBox" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-    <button id="playBtn">▶ 播放</button>
-    <label style="font-size:13px">1 = <select id="pKey"><option value="0">C</option><option value="1">D♭</option><option value="2">D</option><option value="3">E♭</option><option value="4">E</option><option value="5">F</option><option value="6">G♭</option><option value="7">G</option><option value="8">A♭</option><option value="9">A</option><option value="10">B♭</option><option value="11">B</option></select></label>
-    <select id="pInst" title="樂器"><option value="piano">鋼琴</option><option value="violin">提琴</option><option value="guitar">吉他</option><option value="harp">豎琴</option><option value="flute">長笛</option><option value="musicbox">八音盒</option></select>
-    <select id="pSpd" title="速度"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
-    <label style="font-size:12px" title="每個方塊的紅、藍層依序播放（同 TXT 匯出）"><input type="checkbox" id="pSeq" checked>多層依序</label>
+  <div style="display:flex;align-items:center;gap:10px">
+    <h1 data-i18n="appTitle"></h1>
+    <select id="langSel" title="Language / 語言 / Ngôn ngữ / 言語" aria-label="Language">
+      <option value="zh">🌐 繁體中文</option>
+      <option value="en">🌐 English</option>
+      <option value="vi">🌐 Tiếng Việt</option>
+      <option value="ja">🌐 日本語</option>
+    </select>
   </div>
-  <div><button id="pdf">匯出 PDF</button> <button id="jpg">匯出 JPG</button> <button id="txt">匯出 TXT</button></div>
+  <div><button class="tab" id="tabSq" data-i18n="tabSq"></button> <button class="tab" id="tabNum" data-i18n="tabNum"></button></div>
+  <div id="playBox" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="playBtn" data-i18n="play"></button>
+    <label style="font-size:13px">1 = <select id="pKey"><option value="0">C</option><option value="1">D♭</option><option value="2">D</option><option value="3">E♭</option><option value="4">E</option><option value="5">F</option><option value="6">G♭</option><option value="7">G</option><option value="8">A♭</option><option value="9">A</option><option value="10">B♭</option><option value="11">B</option></select></label>
+    <select id="pInst" data-i18n-title="tInst"><option value="piano" data-i18n="iPiano"></option><option value="violin" data-i18n="iViolin"></option><option value="guitar" data-i18n="iGuitar"></option><option value="harp" data-i18n="iHarp"></option><option value="flute" data-i18n="iFlute"></option><option value="musicbox" data-i18n="iBox"></option></select>
+    <select id="pSpd" data-i18n-title="tSpd"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+    <label style="font-size:12px" data-i18n-title="pSeqT"><input type="checkbox" id="pSeq" checked><span data-i18n="pSeq"></span></label>
+  </div>
+  <div><button id="pdf" data-i18n="ePdf"></button> <button id="jpg" data-i18n="eJpg"></button> <button id="txt" data-i18n="eTxt"></button></div>
 </header>
 <main>
   <aside>
     <div id="sqTools" style="display:flex;flex-direction:column;gap:8px">
-    <h2>工具</h2>
-    <button class="tool" data-t="1"><span class="sw" style="background:#000"></span>黑色<small>1</small></button>
-    <button class="tool" data-t="2"><span class="sw" style="background:#f00"></span>紅色<small>2</small></button>
-    <button class="tool" data-t="3"><span class="sw" style="background:#1ba7e6"></span>藍色<small>3</small></button>
-    <button class="tool" data-t="0"><span class="sw" style="background:#fff"></span>橡皮擦<small>4</small></button>
+    <h2 data-i18n="hTools"></h2>
+    <button class="tool" data-t="1"><span class="sw" style="background:#000"></span><span data-i18n="toolK"></span><small>1</small></button>
+    <button class="tool" data-t="2"><span class="sw" style="background:#f00"></span><span data-i18n="toolR"></span><small>2</small></button>
+    <button class="tool" data-t="3"><span class="sw" style="background:#1ba7e6"></span><span data-i18n="toolB"></span><small>3</small></button>
+    <button class="tool" data-t="0"><span class="sw" style="background:#fff"></span><span data-i18n="toolE"></span><small>4</small></button>
     </div>
     <div id="numTools" hidden style="display:flex;flex-direction:column;gap:8px">
-    <h2>數字譜輸入</h2>
-    <label>每節幾個音 <input type="number" id="nPer" min="1" max="16"></label>
-    <label>每列幾節 <input type="number" id="nBpr" min="1" max="8"></label>
-    <label>記譜 <select id="nStyle"><option value="dot">數字加點</option><option value="tick">'1 ''1</option><option value="abc">A1–C1</option></select></label>
-    <label>輸入後前進 <input type="checkbox" id="nAuto"></label>
+    <h2 data-i18n="hNum"></h2>
+    <label><span data-i18n="nPer"></span> <input type="number" id="nPer" min="1" max="16"></label>
+    <label><span data-i18n="nBpr"></span> <input type="number" id="nBpr" min="1" max="8"></label>
+    <label><span data-i18n="nStyle"></span> <select id="nStyle"><option value="dot" data-i18n="nsDot"></option><option value="tick">'1 ''1</option><option value="abc">A1–C1</option></select></label>
+    <label><span data-i18n="nAuto"></span> <input type="checkbox" id="nAuto"></label>
     <div id="nPos" style="font-size:12px;color:#666"></div>
     <div id="keypad"></div>
-    <div style="display:flex;gap:4px"><button class="oct on" data-o="0" style="flex:1">1–7</button><button class="oct" data-o="1" style="flex:1">高</button><button class="oct" data-o="2" style="flex:1">超高</button></div>
+    <div style="display:flex;gap:4px"><button class="oct on" data-o="0" style="flex:1">1–7</button><button class="oct" data-o="1" style="flex:1" data-i18n="oHigh"></button><button class="oct" data-o="2" style="flex:1" data-i18n="oHigher"></button></div>
     <div style="display:flex;gap:4px"><button id="nPrev" style="flex:1">←</button><button id="nNext" style="flex:1">→</button></div>
-    <button id="nClear">清除此格（休止）</button>
-    <button id="nIns">前方插入空格</button>
-    <button id="nDel">刪除此格</button>
-    <p style="font-size:12px;color:#888;margin:2px 0">按鍵盤 1–7 輸入（↑↓換音域，Shift+數字＝和弦不前進，空白鍵/←→移動，Backspace清除）。每格同時按下的音會直向疊起。數字譜為單層；要多層請切到方塊譜按「方塊合併」。</p>
+    <button id="nClear" data-i18n="nClear"></button>
+    <button id="nIns" data-i18n="nIns"></button>
+    <button id="nDel" data-i18n="nDel"></button>
+    <p data-i18n="numHelp" style="font-size:12px;color:#888;margin:2px 0"></p>
     </div>
     <div id="shared" style="display:flex;flex-direction:column;gap:8px">
-    <h2 style="margin-top:12px">版面</h2>
-    <label>每列譜數 <input type="number" id="cols" min="1" max="12" value="6"></label>
-    <button id="clear">清空全部</button>
+    <h2 style="margin-top:12px" data-i18n="hLayout"></h2>
+    <label><span data-i18n="cols"></span> <input type="number" id="cols" min="1" max="12" value="6"></label>
+    <button id="clear" data-i18n="clear"></button>
     </div>
-    <h2 style="margin-top:12px">自動生成</h2>
-    <button id="skyBtn" title="支援一般與加密的光遇 .txt（自動解密）">匯入光遇譜 .txt</button>
-    <button id="ptBtn">貼上簡譜文字</button>
+    <h2 style="margin-top:12px" data-i18n="hAuto"></h2>
+    <button id="skyBtn" data-i18n="skyBtn" data-i18n-title="skyBtnT"></button>
+    <button id="ptBtn" data-i18n="ptBtn"></button>
     <input type="file" id="skyFile" accept=".txt,.json" hidden>
-    <label>每方塊 ms <input type="number" id="unit" min="10" placeholder="自動"></label>
-    <div style="font-size:12px;color:#666">層次→顏色</div>
-    <label>僅第1層 <select id="m1"><option value="1">黑</option><option value="2">紅</option><option value="3">藍</option></select></label>
-    <label>僅第2層 <select id="m2"><option value="1">黑</option><option value="2" selected>紅</option><option value="3">藍</option></select></label>
-    <label>僅第3層 <select id="m3"><option value="1">黑</option><option value="2">紅</option><option value="3" selected>藍</option></select></label>
-    <button id="mergeBtn" title="把連續的方塊疊成 黑→紅→藍 三層">方塊合併</button>
-    <button id="trimBtn">刪除空白方塊</button>
-    <button id="undoBtn" hidden>復原</button>
+    <label><span data-i18n="unit"></span> <input type="number" id="unit" min="10" data-i18n-ph="auto"></label>
+    <div style="font-size:12px;color:#666" data-i18n="layerCol"></div>
+    <label><span data-i18n="m1"></span> <select id="m1"><option value="1" data-i18n="colK"></option><option value="2" data-i18n="colR"></option><option value="3" data-i18n="colB"></option></select></label>
+    <label><span data-i18n="m2"></span> <select id="m2"><option value="1" data-i18n="colK"></option><option value="2" selected data-i18n="colR"></option><option value="3" data-i18n="colB"></option></select></label>
+    <label><span data-i18n="m3"></span> <select id="m3"><option value="1" data-i18n="colK"></option><option value="2" data-i18n="colR"></option><option value="3" selected data-i18n="colB"></option></select></label>
+    <button id="mergeBtn" data-i18n="merge" data-i18n-title="mergeT"></button>
+    <button id="trimBtn" data-i18n="trim"></button>
+    <button id="undoBtn" hidden data-i18n="undo"></button>
     <span id="msg" style="font-size:12px;color:#c33"></span>
-    <p style="font-size:12px;color:#888;margin:6px 0 0">點一下或拖曳塗色；對同色格再點一次可擦除。</p>
+    <p data-i18n="paintHelp" style="font-size:12px;color:#888;margin:6px 0 0"></p>
   </aside>
   <div id="nwrap" hidden><div id="nsheet"></div></div>
   <div id="wrap">
     <div id="sheet"></div>
-    <div id="bar"><button id="addRow">＋ 向下新增一列</button></div>
+    <div id="bar"><button id="addRow" data-i18n="addRow"></button></div>
   </div>
 </main>
 <dialog id="pt">
-  <h3 style="margin:0 0 8px">貼上譜文字（自動辨識格式）</h3>
-  <p style="font-size:12.5px;margin:0 0 8px;line-height:1.6">支援：<br>
-  ① Sky Studio JSON（.txt 內容，<b>加密譜也可，會自動解密</b>）<br>
-  ② 方格文字：<code>. . A1A3B1 . B4</code>（A/B/C＝上/中/下排，1–5＝左到右，<b>.</b>＝休止）<br>
-  ③ 數字＋字母：<code>6 15 j 10 14 l d</code>（數字＝鍵 1–15，字母＝節拍）<br>
-  ④ 數字簡譜：<code>1 3+5 0 6' 2'+4'</code>（空格＝一個方塊，<b>+</b>和弦，<b>0</b>休止，<b>'</b>高八度，<b>,</b>低八度）</p>
-  <label style="font-size:13px">格式 <select id="fmt"><option value="auto">自動</option><option value="jp">數字簡譜</option><option value="nl">數字＋字母</option></select></label>
-  <label style="font-size:13px;margin-left:8px">④ 無記號的 1 = 第 <input type="number" id="base" min="0" max="14" value="0" style="width:48px"> 鍵</label>
+  <h3 style="margin:0 0 8px" data-i18n="ptTitle"></h3>
+  <p style="font-size:12.5px;margin:0 0 8px;line-height:1.6" data-i18n-html="ptHelp"></p>
+  <label style="font-size:13px"><span data-i18n="fmt"></span> <select id="fmt"><option value="auto" data-i18n="fmtAuto"></option><option value="jp" data-i18n="fmtJp"></option><option value="nl" data-i18n="fmtNl"></option></select></label>
+  <label style="font-size:13px;margin-left:8px"><span data-i18n="basePre"></span> <input type="number" id="base" min="0" max="14" value="0" style="width:48px"> <span data-i18n="basePost"></span></label>
   <textarea id="ptText" rows="9" style="width:100%;font-size:14px"></textarea>
-  <label style="font-size:13px;display:block;margin-top:6px">③ 字母佔幾格（字母=格數，逗號分隔）
+  <label style="font-size:13px;display:block;margin-top:6px"><span data-i18n="letters"></span>
     <input id="letters" value="j=2,l=1,d=1,g=2" style="width:100%"></label>
-  <div style="font-size:12px;color:#666">數字後接字母＝該和弦佔幾格；單獨的字母＝休止幾格。</div>
-  <div style="margin-top:10px;text-align:right"><button id="ptCancel">取消</button> <button id="ptGo">產生</button></div>
+  <div style="font-size:12px;color:#666" data-i18n="lettersHint"></div>
+  <div style="margin-top:10px;text-align:right"><button id="ptCancel" data-i18n="cancel"></button> <button id="ptGo" data-i18n="gen"></button></div>
 </dialog>
 
 <dialog id="tx">
-  <h3 style="margin:0 0 6px">匯出 TXT（光遇譜格式）</h3>
-  <div style="font-size:12px;color:#666;margin-bottom:6px;line-height:1.5">都不是必填；沒填或不知道的會用預設值（匯入過光遇譜則沿用原本的資訊）。</div>
-  <label class="fld">歌名 <input id="tName"></label>
-  <label class="fld">作者 author <input id="tAuthor"></label>
-  <label class="fld">抄譜者 transcribedBy <input id="tBy"></label>
+  <h3 style="margin:0 0 6px" data-i18n="txTitle"></h3>
+  <div style="font-size:12px;color:#666;margin-bottom:6px;line-height:1.5" data-i18n="txHint"></div>
+  <label class="fld"><span data-i18n="tName"></span> <input id="tName"></label>
+  <label class="fld"><span data-i18n="tAuthor"></span> <input id="tAuthor"></label>
+  <label class="fld"><span data-i18n="tBy"></span> <input id="tBy"></label>
   <label class="fld">BPM <input id="tBpm" type="number" min="1"></label>
-  <label class="fld">每方塊間隔 ms <input id="tMs" type="number" min="1"></label>
+  <label class="fld"><span data-i18n="tMs"></span> <input id="tMs" type="number" min="1"></label>
   <label class="fld">bitsPerPage <input id="tBits" type="number" min="1"></label>
-  <label class="fld">音高 pitchLevel <input id="tPitch" type="number"></label>
-  <label class="fld">isComposed（作曲模式） <input id="tComposed" type="checkbox"></label>
-  <label class="fld">顏色解讀 <select id="tSeq"><option value="seq">黑→紅→藍 依序彈奏（合併後）</option><option value="flat">忽略顏色，同方塊同時按</option></select></label>
-  <label class="fld">檔案編碼 <select id="tEnc"><option value="8">UTF-8</option><option value="16">UTF-16 LE（光遇原生）</option></select></label>
-  <div style="text-align:right;margin-top:10px"><button id="tCancel">取消</button> <button id="tGo">匯出</button></div>
+  <label class="fld"><span data-i18n="tPitch"></span> <input id="tPitch" type="number"></label>
+  <label class="fld"><span data-i18n="tComposed"></span> <input id="tComposed" type="checkbox"></label>
+  <label class="fld"><span data-i18n="tSeq"></span> <select id="tSeq"><option value="seq" data-i18n="tSeqSeq"></option><option value="flat" data-i18n="tSeqFlat"></option></select></label>
+  <label class="fld"><span data-i18n="tEnc"></span> <select id="tEnc"><option value="8">UTF-8</option><option value="16" data-i18n="tEnc16"></option></select></label>
+  <div style="text-align:right;margin-top:10px"><button id="tCancel" data-i18n="cancel"></button> <button id="tGo" data-i18n="export"></button></div>
 </dialog>
 
 <script>
+// ================= 多語系 i18n：繁體中文 / English / Tiếng Việt / 日本語 =================
+const LANGS={zh:0,en:1,vi:2,ja:3},LKEY='fangkuai-lang';
+let curLang='zh';
+try{curLang=localStorage.getItem(LKEY)}catch(e){}
+if(!LANGS.hasOwnProperty(curLang)){
+  const nv=(navigator.language||'').toLowerCase();
+  curLang=nv.startsWith('ja')?'ja':nv.startsWith('vi')?'vi':nv.startsWith('zh')?'zh':'en';
+}
+// 每個詞條依序為 [繁中, English, Tiếng Việt, 日本語]
+const T={
+docTitle:['我的方塊簡譜','My Block Score','Bản nhạc khối của tôi','マイ・ブロック譜'],
+appTitle:['♫ 我的簡譜','♫ My Score','♫ Bản nhạc của tôi','♫ マイ譜面'],
+tabSq:['方塊譜','Block score','Bản khối','ブロック譜'],
+tabNum:['數字譜','Number score','Bản số','数字譜'],
+play:['▶ 播放','▶ Play','▶ Phát','▶ 再生'],
+stop:['⏹ 停止','⏹ Stop','⏹ Dừng','⏹ 停止'],
+tInst:['樂器','Instrument','Nhạc cụ','楽器'],
+iPiano:['鋼琴','Piano','Piano','ピアノ'],
+iViolin:['提琴','Violin','Violin','ヴァイオリン'],
+iGuitar:['吉他','Guitar','Guitar','ギター'],
+iHarp:['豎琴','Harp','Đàn hạc','ハープ'],
+iFlute:['長笛','Flute','Sáo','フルート'],
+iBox:['八音盒','Music box','Hộp nhạc','オルゴール'],
+tSpd:['速度','Speed','Tốc độ','速度'],
+pSeq:['多層依序','Layers in order','Lần lượt các lớp','多層順次'],
+pSeqT:['每個方塊的紅、藍層依序播放（同 TXT 匯出）','Play the red and blue layers of each block in sequence (same as TXT export)','Phát lần lượt các lớp đỏ, xanh của mỗi khối (giống khi xuất TXT)','各ブロックの赤・青レイヤーを順番に再生（TXT書き出しと同じ）'],
+ePdf:['匯出 PDF','Export PDF','Xuất PDF','PDF書き出し'],
+eJpg:['匯出 JPG','Export JPG','Xuất JPG','JPG書き出し'],
+eTxt:['匯出 TXT','Export TXT','Xuất TXT','TXT書き出し'],
+// 側邊欄
+hTools:['工具','Tools','Công cụ','ツール'],
+toolK:['黑色','Black','Đen','黒'],
+toolR:['紅色','Red','Đỏ','赤'],
+toolB:['藍色','Blue','Xanh','青'],
+toolE:['橡皮擦','Eraser','Tẩy','消しゴム'],
+hNum:['數字譜輸入','Number input','Nhập bản số','数字譜の入力'],
+nPer:['每節幾個音','Beats per measure','Số phách mỗi ô nhịp','1小節の拍数'],
+nBpr:['每列幾節','Measures per row','Số ô nhịp mỗi hàng','1行の小節数'],
+nStyle:['記譜','Notation','Ký hiệu','表記'],
+nsDot:['數字加點','Number + dots','Số kèm chấm','数字＋点'],
+nAuto:['輸入後前進','Advance after input','Tự động tiến sau khi nhập','入力後に進む'],
+oHigh:['高','High','Cao','高'],
+oHigher:['超高','Higher','Cao hơn','超高'],
+nClear:['清除此格（休止）','Clear this beat (rest)','Xóa ô này (nghỉ)','このマスを消去（休符）'],
+nIns:['前方插入空格','Insert blank before','Chèn ô trống phía trước','前に空白を挿入'],
+nDel:['刪除此格','Delete this beat','Xóa ô này','このマスを削除'],
+numHelp:[
+ '按鍵盤 1–7 輸入（↑↓換音域，Shift+數字＝和弦不前進，空白鍵/←→移動，Backspace清除）。每格同時按下的音會直向疊起。數字譜為單層；要多層請切到方塊譜按「方塊合併」。',
+ 'Press 1–7 on the keyboard to enter notes (↑↓ change octave, Shift+digit = chord without advancing, Space/←→ to move, Backspace to clear). Notes played together in one beat are stacked vertically. The number score is single-layer; for multiple layers, switch to Block score and press “Merge blocks”.',
+ 'Nhấn phím 1–7 để nhập nốt (↑↓ đổi quãng tám, Shift+số = hợp âm và không tự tiến, Space/←→ để di chuyển, Backspace để xóa). Các nốt cùng một phách sẽ xếp chồng theo chiều dọc. Bản số chỉ có một lớp; muốn nhiều lớp hãy chuyển sang Bản khối và bấm “Gộp khối”.',
+ 'キーボードの1〜7で音符を入力します（↑↓でオクターブ変更、Shift+数字＝和音（次へ進まない）、スペース／←→で移動、Backspaceで消去）。同じ拍の音は縦に重なります。数字譜は単層です。多層にするにはブロック譜に切り替えて「ブロック結合」を押してください。'],
+hLayout:['版面','Layout','Bố cục','レイアウト'],
+cols:['每列譜數','Blocks per row','Số khối mỗi hàng','1行のブロック数'],
+clear:['清空全部','Clear all','Xóa tất cả','すべて消去'],
+hAuto:['自動生成','Auto-generate','Tạo tự động','自動生成'],
+skyBtn:['匯入光遇譜 .txt','Import Sky score .txt','Nhập bản Sky .txt','Sky譜 .txt を読み込む'],
+skyBtnT:['支援一般與加密的光遇 .txt（自動解密）','Supports normal and encrypted Sky .txt files (auto-decrypted)','Hỗ trợ tệp Sky .txt thường và đã mã hóa (tự động giải mã)','通常の Sky .txt と暗号化されたものに対応（自動で復号）'],
+ptBtn:['貼上簡譜文字','Paste score text','Dán văn bản bản nhạc','譜面テキストを貼り付け'],
+unit:['每方塊 ms','ms per block','ms mỗi khối','1ブロックの ms'],
+auto:['自動','auto','tự động','自動'],
+layerCol:['層次→顏色','Layer → color','Lớp → màu','レイヤー→色'],
+m1:['僅第1層','Layer 1 only','Chỉ lớp 1','第1層のみ'],
+m2:['僅第2層','Layer 2 only','Chỉ lớp 2','第2層のみ'],
+m3:['僅第3層','Layer 3 only','Chỉ lớp 3','第3層のみ'],
+colK:['黑','Black','Đen','黒'],
+colR:['紅','Red','Đỏ','赤'],
+colB:['藍','Blue','Xanh','青'],
+merge:['方塊合併','Merge blocks','Gộp khối','ブロック結合'],
+mergeT:['把連續的方塊疊成 黑→紅→藍 三層','Stack consecutive blocks into three layers: black → red → blue','Xếp các khối liên tiếp thành 3 lớp: đen → đỏ → xanh','連続するブロックを 黒→赤→青 の3層に重ねます'],
+trim:['刪除空白方塊','Remove blank blocks','Xóa khối trống','空白ブロックを削除'],
+undo:['復原','Undo','Hoàn tác','元に戻す'],
+paintHelp:['點一下或拖曳塗色；對同色格再點一次可擦除。','Click or drag to paint; click a same-colored cell again to erase it.','Nhấp hoặc kéo để tô màu; nhấp lại vào ô cùng màu để xóa.','クリックまたはドラッグで塗ります。同じ色のマスをもう一度クリックすると消せます。'],
+addRow:['＋ 向下新增一列','＋ Add a row below','＋ Thêm một hàng bên dưới','＋ 下に行を追加'],
+rmRow:['刪除此列','Delete this row','Xóa hàng này','この行を削除'],
+// 貼上對話框
+ptTitle:['貼上譜文字（自動辨識格式）','Paste score text (format auto-detected)','Dán văn bản bản nhạc (tự nhận dạng định dạng)','譜面テキストを貼り付け（形式を自動判別）'],
+ptHelp:[
+ '支援：<br>① Sky Studio JSON（.txt 內容，<b>加密譜也可，會自動解密</b>）<br>② 方格文字：<code>. . A1A3B1 . B4</code>（A/B/C＝上/中/下排，1–5＝左到右，<b>.</b>＝休止）<br>③ 數字＋字母：<code>6 15 j 10 14 l d</code>（數字＝鍵 1–15，字母＝節拍）<br>④ 數字簡譜：<code>1 3+5 0 6\' 2\'+4\'</code>（空格＝一個方塊，<b>+</b>和弦，<b>0</b>休止，<b>\'</b>高八度，<b>,</b>低八度）',
+ 'Supported:<br>① Sky Studio JSON (.txt contents; <b>encrypted scores work too and are auto-decrypted</b>)<br>② Grid text: <code>. . A1A3B1 . B4</code> (A/B/C = top/middle/bottom row, 1–5 = left to right, <b>.</b> = rest)<br>③ Numbers + letters: <code>6 15 j 10 14 l d</code> (number = key 1–15, letter = beat length)<br>④ Numbered notation: <code>1 3+5 0 6\' 2\'+4\'</code> (space = one block, <b>+</b> chord, <b>0</b> rest, <b>\'</b> octave up, <b>,</b> octave down)',
+ 'Hỗ trợ:<br>① JSON của Sky Studio (nội dung .txt, <b>bản nhạc mã hóa cũng dùng được và sẽ tự động giải mã</b>)<br>② Văn bản dạng lưới: <code>. . A1A3B1 . B4</code> (A/B/C = hàng trên/giữa/dưới, 1–5 = từ trái sang phải, <b>.</b> = nghỉ)<br>③ Số + chữ: <code>6 15 j 10 14 l d</code> (số = phím 1–15, chữ = độ dài phách)<br>④ Bản số: <code>1 3+5 0 6\' 2\'+4\'</code> (dấu cách = một khối, <b>+</b> hợp âm, <b>0</b> nghỉ, <b>\'</b> cao hơn một quãng tám, <b>,</b> thấp hơn một quãng tám)',
+ '対応形式：<br>① Sky Studio JSON（.txt の内容。<b>暗号化された譜面も自動で復号されます</b>）<br>② マス目テキスト：<code>. . A1A3B1 . B4</code>（A/B/C＝上/中/下段、1–5＝左から右、<b>.</b>＝休符）<br>③ 数字＋文字：<code>6 15 j 10 14 l d</code>（数字＝キー1–15、文字＝拍の長さ）<br>④ 数字譜：<code>1 3+5 0 6\' 2\'+4\'</code>（スペース＝1ブロック、<b>+</b>和音、<b>0</b>休符、<b>\'</b>1オクターブ上、<b>,</b>1オクターブ下）'],
+fmt:['格式','Format','Định dạng','形式'],
+fmtAuto:['自動','Auto','Tự động','自動'],
+fmtJp:['數字簡譜','Numbered notation','Bản số','数字譜'],
+fmtNl:['數字＋字母','Numbers + letters','Số + chữ','数字＋文字'],
+basePre:['④ 無記號的 1 = 第','④ Unmarked 1 = key','④ Số 1 không dấu = phím thứ','④ 記号なしの 1 ＝ 第'],
+basePost:['鍵','','','キー'],
+letters:['③ 字母佔幾格（字母=格數，逗號分隔）','③ Blocks per letter (letter=count, comma-separated)','③ Mỗi chữ chiếm mấy khối (chữ=số khối, cách nhau bằng dấu phẩy)','③ 文字が占めるマス数（文字=数、カンマ区切り）'],
+lettersHint:['數字後接字母＝該和弦佔幾格；單獨的字母＝休止幾格。','A letter after numbers = how many blocks that chord lasts; a letter on its own = a rest of that many blocks.','Chữ đứng sau số = hợp âm đó chiếm mấy khối; chữ đứng riêng = nghỉ mấy khối.','数字の後ろの文字＝その和音が占めるマス数。文字だけの場合＝その数だけの休符。'],
+cancel:['取消','Cancel','Hủy','キャンセル'],
+gen:['產生','Generate','Tạo','生成'],
+// TXT 對話框
+txTitle:['匯出 TXT（光遇譜格式）','Export TXT (Sky score format)','Xuất TXT (định dạng bản Sky)','TXT書き出し（Sky譜形式）'],
+txHint:['都不是必填；沒填或不知道的會用預設值（匯入過光遇譜則沿用原本的資訊）。','Everything is optional; blank fields use defaults (or the original info if you imported a Sky score).','Tất cả đều không bắt buộc; ô để trống sẽ dùng giá trị mặc định (hoặc thông tin gốc nếu bạn đã nhập bản Sky).','すべて任意です。空欄はデフォルト値を使います（Sky譜を読み込んだ場合は元の情報を引き継ぎます）。'],
+tName:['歌名','Song title','Tên bài hát','曲名'],
+tAuthor:['作者 author','Author','Tác giả (author)','作者 author'],
+tBy:['抄譜者 transcribedBy','Transcribed by','Người chép nhạc (transcribedBy)','採譜者 transcribedBy'],
+tMs:['每方塊間隔 ms','Interval per block (ms)','Khoảng cách mỗi khối (ms)','ブロックの間隔 ms'],
+tPitch:['音高 pitchLevel','Pitch (pitchLevel)','Cao độ (pitchLevel)','音高 pitchLevel'],
+tComposed:['isComposed（作曲模式）','isComposed (composed mode)','isComposed (chế độ sáng tác)','isComposed（作曲モード）'],
+tSeq:['顏色解讀','Color interpretation','Cách hiểu màu','色の解釈'],
+tSeqSeq:['黑→紅→藍 依序彈奏（合併後）','Play black → red → blue in order (after merging)','Chơi lần lượt đen → đỏ → xanh (sau khi gộp)','黒→赤→青の順に演奏（結合後）'],
+tSeqFlat:['忽略顏色，同方塊同時按','Ignore colors; press a block’s keys together','Bỏ qua màu, nhấn cùng lúc các phím trong một khối','色を無視し、同じブロックは同時に押す'],
+tEnc:['檔案編碼','File encoding','Mã hóa tệp','ファイルのエンコード'],
+tEnc16:['UTF-16 LE（光遇原生）','UTF-16 LE (native to Sky)','UTF-16 LE (định dạng gốc của Sky)','UTF-16 LE（Sky標準）'],
+export:['匯出','Export','Xuất','書き出し'],
+// 訊息
+fnSq:['方塊簡譜','block-score','ban-nhac-khoi','ブロック譜'],
+fnNum:['數字譜','number-score','ban-so','数字譜'],
+pos:['第 {0} 節 · 第 {1} 拍','Measure {0} · Beat {1}','Ô nhịp {0} · Phách {1}','第{0}小節・第{1}拍'],
+confClear:['確定清空全部樂譜？','Clear the whole score?','Bạn có chắc muốn xóa toàn bộ bản nhạc?','楽譜をすべて消去しますか？'],
+confReplace:['會取代目前的樂譜，確定嗎？','This will replace the current score. Continue?','Thao tác này sẽ thay thế bản nhạc hiện tại. Tiếp tục?','現在の楽譜が置き換えられます。よろしいですか？'],
+readFail:['讀取失敗：{0}','Failed to read: {0}','Đọc thất bại: {0}','読み込みに失敗しました：{0}'],
+eSongNotes:['加密譜的 songNotes 格式不正確','The songNotes format of the encrypted score is invalid','Định dạng songNotes của bản nhạc mã hóa không hợp lệ','暗号化譜の songNotes の形式が正しくありません'],
+eDecrypt:['解密失敗：金鑰版本可能不同（keyVersion={0}）','Decryption failed: the key version may differ (keyVersion={0})','Giải mã thất bại: có thể khác phiên bản khóa (keyVersion={0})','復号に失敗しました：鍵のバージョンが異なる可能性があります（keyVersion={0}）'],
+eNotArr:['解密後不是音符陣列','The decrypted data is not a note array','Dữ liệu sau khi giải mã không phải mảng nốt nhạc','復号後のデータが音符の配列ではありません'],
+eEmpty:['內容是空的','The content is empty','Nội dung trống','内容が空です'],
+eJson:['JSON 格式有誤','Invalid JSON format','Định dạng JSON không đúng','JSON の形式が正しくありません'],
+eNumArr:['純數字陣列缺少譜的外層資訊，請匯入完整的光遇 .txt','A bare number array lacks the outer score info; please import the complete Sky .txt','Mảng số thuần thiếu thông tin bên ngoài của bản nhạc, hãy nhập tệp Sky .txt đầy đủ','数字だけの配列には譜面の外側の情報がありません。完全な Sky .txt を読み込んでください'],
+eUnknown:['格式不明','Unknown format','Không rõ định dạng','形式が不明です'],
+eNotSky:['不是光遇譜格式','Not a Sky score format','Không phải định dạng bản nhạc Sky','Sky譜の形式ではありません'],
+eNoFmt:['無法辨識格式','Unable to recognize the format','Không thể nhận dạng định dạng','形式を判別できません'],
+decrypted:['已自動解密加密譜：{0}','Encrypted score decrypted automatically: {0}','Đã tự động giải mã bản nhạc: {0}','暗号化譜を自動で復号しました：{0}'],
+doneGrid:['方格文字：已生成 {0} 個方塊','Grid text: generated {0} blocks','Văn bản dạng lưới: đã tạo {0} khối','マス目テキスト：{0} ブロックを生成しました'],
+doneJp:['簡譜：已生成 {0} 個方塊','Numbered notation: generated {0} blocks','Bản số: đã tạo {0} khối','数字譜：{0} ブロックを生成しました'],
+done:['已生成 {0} 個方塊','Generated {0} blocks','Đã tạo {0} khối','{0} ブロックを生成しました'],
+badRange:['；超出音域：{0}','; out of range: {0}','; ngoài âm vực: {0}','；音域外：{0}'],
+badSkip:['；略過：{0}','; skipped: {0}','; đã bỏ qua: {0}','；スキップ：{0}'],
+noBlank:['沒有空白方塊','No blank blocks','Không có khối trống','空白ブロックはありません'],
+allBlank:['整份都是空白，未刪除','The whole score is blank; nothing deleted','Toàn bộ bản nhạc đều trống, không xóa gì','楽譜全体が空白のため、削除しませんでした'],
+trimmed:['已刪除 {0} 個空白方塊','Removed {0} blank blocks','Đã xóa {0} khối trống','空白ブロックを {0} 個削除しました'],
+undone:['已復原','Undone','Đã hoàn tác','元に戻しました'],
+noMerge:['沒有可合併的方塊','No blocks to merge','Không có khối nào để gộp','結合できるブロックがありません'],
+merged:['已合併：{0} → {1} 個方塊','Merged: {0} → {1} blocks','Đã gộp: {0} → {1} khối','結合しました：{0} → {1} ブロック'],
+noExport:['沒有音符可匯出','No notes to export','Không có nốt nhạc để xuất','書き出せる音符がありません'],
+exported:['已匯出 {0} 個音符','Exported {0} notes','Đã xuất {0} nốt nhạc','{0} 個の音符を書き出しました'],
+noPlay:['沒有音符可播放','No notes to play','Không có nốt nhạc để phát','再生できる音符がありません']
+};
+const t=(k,...a)=>{
+  const e=T[k];if(!e)return k;
+  let s=e[LANGS[curLang]];if(s==null)s=e[0];
+  a.forEach((v,i)=>{s=s.split('{'+i+'}').join(v)});
+  return s;
+};
+function applyLang(){
+  document.documentElement.lang=['zh-Hant','en','vi','ja'][LANGS[curLang]];
+  document.title=t('docTitle');
+  document.querySelectorAll('[data-i18n]').forEach(e=>e.textContent=t(e.dataset.i18n));
+  document.querySelectorAll('[data-i18n-html]').forEach(e=>e.innerHTML=t(e.dataset.i18nHtml));
+  document.querySelectorAll('[data-i18n-title]').forEach(e=>e.title=t(e.dataset.i18nTitle));
+  document.querySelectorAll('[data-i18n-ph]').forEach(e=>e.placeholder=t(e.dataset.i18nPh));
+  document.getElementById('langSel').value=curLang;
+}
+document.getElementById('langSel').onchange=e=>{
+  curLang=e.target.value;
+  try{localStorage.setItem(LKEY,curLang)}catch(_){}
+  applyLang();msg('');render();
+  if(pTimer)document.getElementById('playBtn').textContent=t('stop');
+};
+
 const W=5,H=3,KEY='fangkuai-score-v1';
 let tool=1,cols=6,rows=[],painting=false,paintVal=1,meta=null;
 const newBox=()=>Array(W*H).fill(0);
@@ -169,7 +334,7 @@ function renderSq(){
       });
       rd.appendChild(bd);
     });
-    const x=document.createElement('button');x.className='rm';x.textContent='✕';x.title='刪除此列';
+    const x=document.createElement('button');x.className='rm';x.textContent='✕';x.title=t('rmRow');
     x.onclick=()=>{if(rows.length>1){rows.splice(r,1);save();render()}};
     rd.appendChild(x);sh.appendChild(rd);
   });
@@ -206,7 +371,7 @@ setTool(1);
 
 document.getElementById('addRow').onclick=()=>{rows.push(newRow());save();render()};
 document.getElementById('clear').onclick = () => {
-    if (!confirm('確定清空全部樂譜？')) return;
+    if (!confirm(t('confClear'))) return;
 
     rows.forEach((row, index) => {
         rows[index] = newRow();
@@ -253,7 +418,7 @@ function drawCanvas(){
   return cv;
 }
 function download(url,name){const a=document.createElement('a');a.href=url;a.download=name;a.click()}
-document.getElementById('jpg').onclick=()=>download(drawCanvas().toDataURL('image/jpeg',0.95),'方塊簡譜.jpg');
+document.getElementById('jpg').onclick=()=>download(drawCanvas().toDataURL('image/jpeg',0.95),t('fnSq')+'.jpg');
 document.getElementById('pdf').onclick = () => {
 
     const { jsPDF } = window.jspdf;
@@ -378,7 +543,7 @@ document.getElementById('pdf').onclick = () => {
 
     });
 
-    pdf.save('方塊簡譜.pdf');
+    pdf.save(t('fnSq')+'.pdf');
 
 };
 
@@ -386,7 +551,7 @@ document.getElementById('pdf').onclick = () => {
 const $=id=>document.getElementById(id),msg=t=>$('msg').textContent=t||'';
 const hasContent=()=>rows.some(r=>r.some(b=>b.some(v=>v)));
 function fillBoxes(slots){
-  if(hasContent()&&!confirm('會取代目前的樂譜，確定嗎？'))return false;
+  if(hasContent()&&!confirm(t('confReplace')))return false;
   const n=Math.max(1,Math.ceil(slots.length/cols));
   rows=Array.from({length:n},newRow);
   slots.forEach((c,i)=>{rows[Math.floor(i/cols)][i%cols]=c});
@@ -401,13 +566,13 @@ let sky=null;
 $('skyBtn').onclick=()=>$('skyFile').click();
 $('skyFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{importAny(readText(await f.arrayBuffer()))}catch(err){msg('讀取失敗：'+err.message)}
+  try{importAny(readText(await f.arrayBuffer()))}catch(err){msg(t('readFail',err.message))}
   e.target.value='';
 };
 $('ptBtn').onclick=()=>$('pt').showModal();
 $('ptCancel').onclick=()=>$('pt').close();
 $('ptGo').onclick=()=>{
-  try{importAny($('ptText').value);$('pt').close()}catch(err){msg('讀取失敗：'+err.message);$('pt').close()}
+  try{importAny($('ptText').value);$('pt').close()}catch(err){msg(t('readFail',err.message));$('pt').close()}
 };
 // ---- 光遇加密譜解密（isEncrypted:true，songNotes 為整數陣列）----
 const _SK=a=>a.map(v=>String.fromCharCode(v^0x5A)).join('');
@@ -415,7 +580,7 @@ const SKY_KEY=_SK([0x0E,0x18,0x76,0x08,0x7C,0x0B,0x27,0x77,0x0F,0x16,0x1C,0x02,0
 const SKY_END=_SK([0x20,0x2E,0x18,0x05,0x31,0x3B,0x1C,0x3F,0x0B,0x3F,0x75,0x2D,0x3B,0x62,0x11,0x2B,0x21,0x28,0x05,0x30,0x20,0x7B,0x28,0x67,0x0A,0x07,0x73,0x32,0x0B,0x16,0x72,0x3C]);
 function decryptSky(song){
   if(!Array.isArray(song.songNotes)||!song.songNotes.every(x=>typeof x==='number'))
-    throw new Error('加密譜的 songNotes 格式不正確');
+    throw new Error(t('eSongNotes'));
   let s='';
   song.songNotes.forEach((v,i)=>{
     const c=v-SKY_KEY.charCodeAt(i%SKY_KEY.length)+100;
@@ -423,22 +588,22 @@ function decryptSky(song){
   });
   const end=s.indexOf(SKY_END);if(end!==-1)s=s.slice(0,end);
   let notes;
-  try{notes=JSON.parse(s)}catch(e){throw new Error('解密失敗：金鑰版本可能不同（keyVersion='+song.keyVersion+'）')}
-  if(!Array.isArray(notes))throw new Error('解密後不是音符陣列');
+  try{notes=JSON.parse(s)}catch(e){throw new Error(t('eDecrypt',song.keyVersion))}
+  if(!Array.isArray(notes))throw new Error(t('eNotArr'));
   const out={...song,songNotes:notes,isEncrypted:false};delete out.keyVersion;
   return out;
 }
 function importAny(raw){
   const t=raw.replace(/^\s*```.*$/gm,'').trim();
-  if(!t)throw new Error('內容是空的');
+  if(!t)throw new Error(t('eEmpty'));
   if(/^[\[{]/.test(t)){
-    let d;try{d=JSON.parse(t)}catch(e){throw new Error('JSON 格式有誤')}
+    let d;try{d=JSON.parse(t)}catch(e){throw new Error(t('eJson'))}
     if(Array.isArray(d)&&d.length&&d.every(x=>typeof x==='number'))
-      throw new Error('純數字陣列缺少譜的外層資訊，請匯入完整的光遇 .txt');
+      throw new Error(t('eNumArr'));
     if(Array.isArray(d))d=d[0];
-    if(d&&d.isEncrypted){d=decryptSky(d);msg('已自動解密加密譜：'+(d.name||''))}
-    if(!d)throw new Error('格式不明');
-    if(!Array.isArray(d.songNotes))throw new Error('不是光遇譜格式');
+    if(d&&d.isEncrypted){d=decryptSky(d);msg(t('decrypted',d.name||''))}
+    if(!d)throw new Error(t('eUnknown'));
+    if(!Array.isArray(d.songNotes))throw new Error(t('eNotSky'));
     sky=d;meta={name:d.name,author:d.author,transcribedBy:d.transcribedBy,isComposed:d.isComposed,bpm:d.bpm,bitsPerPage:d.bitsPerPage,pitchLevel:d.pitchLevel};$('unit').value='';convertSky();return;
   }
   const toks=t.split(/[\s|]+/).filter(Boolean);sky=null;
@@ -449,7 +614,7 @@ function importAny(raw){
       for(const m of x.matchAll(/([A-C])([1-5])/gi))c[(m[1].toUpperCase().charCodeAt(0)-65)*5+(+m[2]-1)]=1;
       return c;
     });
-    if(fillBoxes(slots))msg('方格文字：已生成 '+slots.length+' 個方塊');
+    if(fillBoxes(slots))msg(t('doneGrid',slots.length));
     return;
   }
   const jpRe=/^[0-7](?:'+|,+)?(?:\+[0-7](?:'+|,+)?)*$/,fmt=$('fmt').value;
@@ -464,7 +629,7 @@ function importAny(raw){
       });
       return c;
     });
-    if(fillBoxes(slots))msg('簡譜：已生成 '+slots.length+' 個方塊'+(bad.size?'；超出音域：'+[...bad].join(' '):''));
+    if(fillBoxes(slots))msg(t('doneJp',slots.length)+(bad.size?t('badRange',[...bad].join(' ')):''));
     return;
   }
   // 數字＋字母
@@ -482,8 +647,8 @@ function importAny(raw){
     }else bad.add(x);
   });
   if(cur)slots.push(cur);
-  if(!slots.length)throw new Error('無法辨識格式');
-  if(fillBoxes(slots))msg('已生成 '+slots.length+' 個方塊'+(bad.size?'；略過：'+[...bad].join(' '):''));
+  if(!slots.length)throw new Error(t('eNoFmt'));
+  if(fillBoxes(slots))msg(t('done',slots.length)+(bad.size?t('badSkip',[...bad].join(' ')):''));
 }
 $('unit').onchange=()=>{if(sky)convertSky()};
 ['m1','m2','m3'].forEach(i=>$(i).onchange=()=>{if(sky)convertSky()});
@@ -506,26 +671,26 @@ function convertSky(){
   });
   const slots=[];
   for(let s=0;s<=max;s++)slots.push(m[s]?m[s].map(v=>col[v]):newBox());
-  if(fillBoxes(slots))msg('已生成 '+slots.length+' 個方塊');
+  if(fillBoxes(slots))msg(t('done',slots.length));
 }
 let backup=null;
 $('trimBtn').onclick=()=>{
   const all=rows.flat(),kept=all.filter(b=>b.some(v=>v)),n=all.length-kept.length;
-  if(!n){msg('沒有空白方塊');return}
-  if(!kept.length){msg('整份都是空白，未刪除');return}
+  if(!n){msg(t('noBlank'));return}
+  if(!kept.length){msg(t('allBlank'));return}
   backup=JSON.stringify({cols,rows});
   rows=Array.from({length:Math.ceil(kept.length/cols)},newRow);
   kept.forEach((b,i)=>{rows[Math.floor(i/cols)][i%cols]=b});
-  save();render();msg('已刪除 '+n+' 個空白方塊');$('undoBtn').hidden=false;
+  save();render();msg(t('trimmed',n));$('undoBtn').hidden=false;
 };
 $('undoBtn').onclick=()=>{
   if(!backup)return;const o=JSON.parse(backup);rows=o.rows;cols=o.cols;
-  save();render();$('undoBtn').hidden=true;backup=null;msg('已復原');
+  save();render();$('undoBtn').hidden=true;backup=null;msg(t('undone'));
 };
 // ---- 方塊合併：連續方塊疊成 第1層黑 → 第2層紅 → 第3層藍 ----
 $('mergeBtn').onclick=()=>{
   const all=rows.flat(),cnt=g=>g.reduce((a,v)=>a+v,0);
-  if(!all.some(b=>b.some(v=>v))){msg('沒有可合併的方塊');return}
+  if(!all.some(b=>b.some(v=>v))){msg(t('noMerge'));return}
   const out=[];let grp=[];
   const flush=()=>{
     if(!grp.length)return;
@@ -543,18 +708,18 @@ $('mergeBtn').onclick=()=>{
     grp.push(s);
   });
   flush();
-  if(out.length>=all.length){msg('沒有可合併的方塊');return}
+  if(out.length>=all.length){msg(t('noMerge'));return}
   backup=JSON.stringify({cols,rows});
   rows=Array.from({length:Math.ceil(out.length/cols)},newRow);
   out.forEach((b,i)=>{rows[Math.floor(i/cols)][i%cols]=b});
-  save();render();msg('已合併：'+all.length+' → '+out.length+' 個方塊');$('undoBtn').hidden=false;
+  save();render();msg(t('merged',all.length,out.length));$('undoBtn').hidden=false;
 };
 
 // ---- 匯出 TXT（光遇譜 JSON）----
 const num=(v,d)=>v!=null&&v!==''&&isFinite(+v)?+v:d;
 $('txt').onclick=()=>{
   const m=meta||{};
-  $('tName').value=m.name||'方塊簡譜';
+  $('tName').value=m.name||t('fnSq');
   $('tAuthor').value=m.author||'Unknown';
   $('tBy').value=m.transcribedBy||'Unknown';
   $('tBpm').value=num(m.bpm,230);
@@ -579,9 +744,9 @@ $('tGo').onclick=()=>{
     });
   });
   $('tx').close();
-  if(!notes.length){msg('沒有音符可匯出');return}
+  if(!notes.length){msg(t('noExport'));return}
   const song={
-    name:$('tName').value.trim()||'方塊簡譜',
+    name:$('tName').value.trim()||t('fnSq'),
     author:$('tAuthor').value.trim()||'Unknown',
     transcribedBy:$('tBy').value.trim()||'Unknown',
     isComposed:$('tComposed').checked,
@@ -602,7 +767,7 @@ $('tGo').onclick=()=>{
   download(url,song.name.replace(/[\\/:*?"<>|]/g,'_')+'.txt');
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   const {songNotes,isEncrypted,...rest}=song;meta=rest;save();
-  msg('已匯出 '+notes.length+' 個音符');
+  msg(t('exported',notes.length));
 };
 
 // ================= 數字譜 =================
@@ -647,7 +812,7 @@ function renderNum(){
     const b=document.createElement('button');b.className='kp'+(cur.includes(k)?' on':'');b.tabIndex=-1;
     b.appendChild(ntEl(k));b.onclick=()=>toggleNote(k,true);kp.appendChild(b);
   }
-  $('nPos').textContent='第 '+(Math.floor(sel/per)+1)+' 節 · 第 '+(sel%per+1)+' 拍';
+  $('nPos').textContent=t('pos',Math.floor(sel/per)+1,sel%per+1);
   const c=box.querySelector('.sel');if(c)c.scrollIntoView({block:'nearest',inline:'nearest'});
 }
 function syncMode(){
@@ -714,7 +879,7 @@ function drawNumCanvas(r0=0,r1=Infinity){
   return cv;
 }
 {const jpgSq=$('jpg').onclick,pdfSq=$('pdf').onclick;
- $('jpg').onclick=()=>mode==='num'?download(drawNumCanvas().toDataURL('image/jpeg',0.95),'數字譜.jpg'):jpgSq();
+ $('jpg').onclick=()=>mode==='num'?download(drawNumCanvas().toDataURL('image/jpeg',0.95),t('fnNum')+'.jpg'):jpgSq();
  $('pdf').onclick=()=>{
    if(mode!=='num')return pdfSq();
    // 依高度分頁（避免超過 PDF／canvas 尺寸上限被裁掉）
@@ -729,7 +894,7 @@ function drawNumCanvas(r0=0,r1=Infinity){
      else pdf.addPage([w,hh],w>hh?'l':'p');
      pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,hh);
    });
-   pdf.save('數字譜.pdf');
+   pdf.save(t('fnNum')+'.pdf');
   };}
 
 
@@ -797,16 +962,16 @@ function stopPlay(){
   clearInterval(pTimer);pTimer=null;
   if(pPrev){pPrev.classList.remove('playing');pPrev=null}
   if(master){const m=master;m.gain.setTargetAtTime(0,ac.currentTime,.03);setTimeout(()=>m.disconnect(),400);master=null}
-  $('playBtn').textContent='▶ 播放';
+  $('playBtn').textContent=t('play');
 }
 function startPlay(){
   initAudio();
   const steps=playSteps(mode==='num'?sel:0);
-  if(!steps.some(s=>s.keys.length)){msg('沒有音符可播放');return}
+  if(!steps.some(s=>s.keys.length)){msg(t('noPlay'));return}
   const spd=+$('pSpd').value||1;
   const unit=((+$('unit').value||(meta&&meta.bpm>0?Math.round(60000/meta.bpm):260)))/spd/1000;
   const t0=ac.currentTime+.15;let i=0,cur=-1;
-  $('playBtn').textContent='⏹ 停止';
+  $('playBtn').textContent=t('stop');
   pTimer=setInterval(()=>{
     while(i<steps.length&&t0+i*unit<ac.currentTime+.3){
       steps[i].keys.forEach(k=>playNote(k,t0+i*unit,unit));i++;
@@ -823,6 +988,7 @@ try{const p=JSON.parse(localStorage.getItem(PKEY));if(p){['pKey','pInst','pSpd']
   try{localStorage.setItem(PKEY,JSON.stringify({pKey:$('pKey').value,pInst:$('pInst').value,pSpd:$('pSpd').value,pSeq:$('pSeq').checked}))}catch(e){}
 });
 
+applyLang();
 render();
 </script>
 </body>
