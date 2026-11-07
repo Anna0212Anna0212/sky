@@ -8,7 +8,7 @@ Không cần cài đặt phần mềm nào — chỉ cần mở trang web là c�
 
 🌐 Giao diện hỗ trợ **繁體中文 / English / Tiếng Việt / 日本語**. Hãy dùng menu ngôn ngữ ở góc trên bên trái của trang để chuyển đổi (lựa chọn của bạn sẽ được ghi nhớ).
 
-![Bản nhạc khối của tôi](14.png)
+![Bản nhạc khối của tôi](1_vi.png)
 
 ## Sử dụng trực tuyến
 
@@ -16,8 +16,8 @@ Không cần cài đặt phần mềm nào — chỉ cần mở trang web là c�
 
 ## Ảnh minh họa
 
-![Bản nhạc khối của tôi](12.png)
-![Bản nhạc khối của tôi](123.png)
+![Bản nhạc khối của tôi](2_vi.png)
+![Bản nhạc khối của tôi](3_vi.png)
 
 ## Tính năng
 
@@ -86,7 +86,7 @@ Bạn cũng có thể tự điều chỉnh:
 
 ## Dán văn bản bản nhạc (tự nhận dạng định dạng)
 
-![Bản nhạc khối của tôi](13.png)
+![Bản nhạc khối của tôi](4_vi.png)
 
 ### Quy tắc định dạng
 
