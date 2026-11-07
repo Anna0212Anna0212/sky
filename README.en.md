@@ -8,7 +8,7 @@ No installation needed — just open the page to edit, save, and export your sco
 
 🌐 The interface supports **繁體中文 / English / Tiếng Việt / 日本語**. Use the language menu at the top-left of the page to switch (your choice is remembered).
 
-![My Block Score](1_en.png)
+![My Block Score](image/1_en.png)
 
 ## Use it online
 
@@ -16,8 +16,8 @@ No installation needed — just open the page to edit, save, and export your sco
 
 ## Screenshots
 
-![My Block Score](2_en.png)
-![My Block Score](3_en.png)
+![My Block Score](image/2_en.png)
+![My Block Score](image/3_en.png)
 
 ## Features
 
@@ -86,7 +86,7 @@ You can also adjust:
 
 ## Pasting score text (format auto-detected)
 
-![My Block Score](4_en.png)
+![My Block Score](image/4_en.png)
 
 ### Format rules
 
